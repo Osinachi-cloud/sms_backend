@@ -1,0 +1,17 @@
+package com.schoolsaas.repository;
+
+import com.schoolsaas.model.Message;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface MessageRepository extends JpaRepository<Message, UUID> {
+    List<Message> findByConversationIdOrderByCreatedAtAsc(UUID conversationId);
+    Page<Message> findByConversationIdOrderByCreatedAtDesc(UUID conversationId, Pageable pageable);
+    long countByConversationIdAndCreatedAtAfter(UUID conversationId, java.time.LocalDateTime after);
+}

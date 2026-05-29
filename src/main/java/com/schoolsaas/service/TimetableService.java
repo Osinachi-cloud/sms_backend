@@ -1,0 +1,102 @@
+package com.schoolsaas.service;
+
+import com.schoolsaas.dto.timetable.TimetableEntryDto;
+import com.schoolsaas.dto.timetable.TimetablePeriodDto;
+import com.schoolsaas.model.TimetableEntry;
+import com.schoolsaas.model.TimetablePeriod;
+import com.schoolsaas.repository.*;
+import com.schoolsaas.security.SecurityUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class TimetableService {
+
+    private final TimetablePeriodRepository periodRepository;
+    private final TimetableEntryRepository entryRepository;
+    private final ClassRepository classRepository;
+    private final SubjectRepository subjectRepository;
+    private final TeacherRepository teacherRepository;
+    private final TeacherActivityLogService activityLogService;
+
+    @Transactional
+    public TimetablePeriodDto createPeriod(UUID schoolId, TimetablePeriodDto dto) {
+        TimetablePeriod period = TimetablePeriod.builder()
+                .schoolId(schoolId)
+                .name(dto.getName())
+                .startTime(dto.getStartTime())
+                .endTime(dto.getEndTime())
+                .periodOrder(dto.getPeriodOrder())
+                .isBreak(dto.getIsBreak())
+                .build();
+        period = periodRepository.save(period);
+        return mapPeriodDto(period);
+    }
+
+    public List<TimetablePeriodDto> getPeriods(UUID schoolId) {
+        return periodRepository.findBySchoolIdAndIsActiveTrueOrderByPeriodOrderAsc(schoolId)
+                .stream().map(this::mapPeriodDto).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public TimetableEntryDto createEntry(UUID schoolId, TimetableEntryDto dto) {
+        TimetableEntry entry = TimetableEntry.builder()
+                .schoolId(schoolId)
+                .classId(dto.getClassId())
+                .subjectId(dto.getSubjectId())
+                .teacherId(dto.getTeacherId())
+                .periodId(dto.getPeriodId())
+                .dayOfWeek(dto.getDayOfWeek())
+                .room(dto.getRoom())
+                .build();
+        entry = entryRepository.save(entry);
+        return mapEntryDto(entry);
+    }
+
+    public List<TimetableEntryDto> getClassTimetable(UUID schoolId, UUID classId) {
+        return entryRepository.findBySchoolIdAndClassIdAndIsActiveTrue(schoolId, classId)
+                .stream().map(this::mapEntryDto).collect(Collectors.toList());
+    }
+
+    public List<TimetableEntryDto> getTeacherTimetable(UUID schoolId, UUID teacherId) {
+        return entryRepository.findBySchoolIdAndTeacherIdAndIsActiveTrue(schoolId, teacherId)
+                .stream().map(this::mapEntryDto).collect(Collectors.toList());
+    }
+
+    private TimetablePeriodDto mapPeriodDto(TimetablePeriod p) {
+        TimetablePeriodDto dto = new TimetablePeriodDto();
+        dto.setId(p.getId());
+        dto.setName(p.getName());
+        dto.setStartTime(p.getStartTime());
+        dto.setEndTime(p.getEndTime());
+        dto.setPeriodOrder(p.getPeriodOrder());
+        dto.setIsBreak(p.getIsBreak());
+        return dto;
+    }
+
+    private TimetableEntryDto mapEntryDto(TimetableEntry e) {
+        TimetableEntryDto dto = new TimetableEntryDto();
+        dto.setId(e.getId());
+        dto.setClassId(e.getClassId());
+        classRepository.findById(e.getClassId()).ifPresent(c -> dto.setClassName(c.getName()));
+        dto.setSubjectId(e.getSubjectId());
+        if (e.getSubjectId() != null) subjectRepository.findById(e.getSubjectId()).ifPresent(s -> dto.setSubjectName(s.getName()));
+        dto.setTeacherId(e.getTeacherId());
+        if (e.getTeacherId() != null) teacherRepository.findById(e.getTeacherId()).ifPresent(t -> dto.setTeacherName(t.getFullName()));
+        dto.setPeriodId(e.getPeriodId());
+        periodRepository.findById(e.getPeriodId()).ifPresent(p -> {
+            dto.setPeriodName(p.getName());
+            dto.setStartTime(p.getStartTime());
+            dto.setEndTime(p.getEndTime());
+        });
+        dto.setDayOfWeek(e.getDayOfWeek());
+        dto.setRoom(e.getRoom());
+        return dto;
+    }
+}

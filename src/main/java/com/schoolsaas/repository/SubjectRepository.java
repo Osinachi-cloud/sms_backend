@@ -1,0 +1,16 @@
+package com.schoolsaas.repository;
+
+import com.schoolsaas.model.Subject;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface SubjectRepository extends JpaRepository<Subject, UUID> {
+
+    List<Subject> findBySchoolIdAndIsActiveTrue(UUID schoolId);
+
+    List<Subject> findBySchoolId(UUID schoolId);
+}
