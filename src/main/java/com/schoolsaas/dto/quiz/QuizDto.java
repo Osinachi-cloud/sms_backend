@@ -2,6 +2,7 @@ package com.schoolsaas.dto.quiz;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -16,8 +17,8 @@ public class QuizDto {
     private UUID classId;
     private String className;
     private Integer durationMinutes;
-    private Double totalMarks;
-    private Double passMark;
+    private BigDecimal totalMarks;
+    private BigDecimal passMark;
     private Boolean shuffleQuestions;
     private Boolean showResultsImmediately;
     private Integer maxAttempts;

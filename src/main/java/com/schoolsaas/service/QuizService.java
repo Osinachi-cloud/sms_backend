@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -119,17 +121,17 @@ public class QuizService {
                 .findByQuizIdAndStudentIdAndStatus(quizId, studentId, "IN_PROGRESS")
                 .orElseThrow(() -> new RuntimeException("No active submission found"));
 
-        double totalScore = 0;
-        double maxMarks = 0;
+        BigDecimal totalScore = BigDecimal.ZERO;
+        BigDecimal maxMarks = BigDecimal.ZERO;
         List<QuizAnswerDto> answerDtos = new ArrayList<>();
 
         for (QuizQuestion question : questions) {
-            maxMarks += question.getMarks();
+            maxMarks = maxMarks.add(question.getMarks());
             Map<String, Object> answerData = request.getAnswers().stream()
                     .filter(a -> question.getId().equals(UUID.fromString(a.get("questionId").toString())))
                     .findFirst().orElse(null);
 
-            double marksObtained = 0;
+            BigDecimal marksObtained = BigDecimal.ZERO;
             Boolean isCorrect = false;
             String userAnswer = "";
             List<String> selectedOptions = new ArrayList<>();
@@ -155,7 +157,7 @@ public class QuizService {
                     .build();
             answerRepository.save(answer);
 
-            totalScore += marksObtained;
+            totalScore = totalScore.add(marksObtained);
 
             QuizAnswerDto ad = new QuizAnswerDto();
             ad.setQuestionId(question.getId());
@@ -169,8 +171,11 @@ public class QuizService {
             answerDtos.add(ad);
         }
 
-        double percentage = maxMarks > 0 ? (totalScore / maxMarks) * 100 : 0;
-        String gradeLetter = percentage >= 70 ? "A" : percentage >= 60 ? "B" : percentage >= 50 ? "C" : percentage >= 45 ? "D" : "F";
+        BigDecimal percentage = maxMarks.compareTo(BigDecimal.ZERO) > 0 
+                ? totalScore.multiply(new BigDecimal("100")).divide(maxMarks, 2, RoundingMode.HALF_UP) 
+                : BigDecimal.ZERO;
+        double percentageDouble = percentage.doubleValue();
+        String gradeLetter = percentageDouble >= 70 ? "A" : percentageDouble >= 60 ? "B" : percentageDouble >= 50 ? "C" : percentageDouble >= 45 ? "D" : "F";
 
         submission.setSubmittedAt(LocalDateTime.now());
         submission.setScore(totalScore);

@@ -4,11 +4,41 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="821a5085-3ee0-4c82-9327-500cca969d15" name="Changes" comment="" />
+    <list default="true" id="821a5085-3ee0-4c82-9327-500cca969d15" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/config/DataSeeder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/config/DataSeeder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/AdmissionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/AdmissionController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/admission/AdmissionApplicationDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/admission/AdmissionApplicationDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizAnswerDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizAnswerDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizQuestionDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizQuestionDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizResultDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizResultDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/reportcard/ReportCardDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/reportcard/ReportCardDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/reportcard/ReportCardEntryDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/reportcard/ReportCardEntryDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/timetable/TimetableEntryDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/timetable/TimetableEntryDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/AdmissionApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/AdmissionApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/BookBorrowal.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/BookBorrowal.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Quiz.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Quiz.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/QuizAnswer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/QuizAnswer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/QuizQuestion.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/QuizQuestion.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/QuizSubmission.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/QuizSubmission.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/ReportCard.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/ReportCard.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/ReportCardEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/ReportCardEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/TeacherActivityLogRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/TeacherActivityLogRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/AdmissionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/AdmissionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/LibraryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/LibraryService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/QuizService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/QuizService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/ReportCardService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/ReportCardService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/application.yml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MavenRunner">
     <option name="skipTests" value="true" />
@@ -34,6 +64,7 @@
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
     &quot;Spring Boot.SchoolSaasApplication.executor&quot;: &quot;Run&quot;,
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
@@ -87,7 +118,9 @@
       <workItem from="1778744267841" duration="990000" />
       <workItem from="1778767581858" duration="595000" />
       <workItem from="1778836514731" duration="594000" />
-      <workItem from="1780043733914" duration="575000" />
+      <workItem from="1780043733914" duration="6250000" />
+      <workItem from="1780226006867" duration="1372000" />
+      <workItem from="1780345676445" duration="4478000" />
     </task>
     <servers />
   </component>

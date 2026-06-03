@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -56,7 +57,7 @@ public class AdmissionService {
     }
 
     @Transactional
-    public AdmissionApplicationDto reviewApplication(UUID applicationId, String status, String reviewNotes, Double examScore, Double interviewScore) {
+    public AdmissionApplicationDto reviewApplication(UUID applicationId, String status, String reviewNotes, BigDecimal examScore, BigDecimal interviewScore) {
         AdmissionApplication app = applicationRepository.findById(applicationId).orElseThrow();
         app.setStatus(status);
         app.setReviewNotes(reviewNotes);

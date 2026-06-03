@@ -11,6 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -53,13 +55,15 @@ public class ReportCardService {
 
         // Pull grades for the term
         List<Grade> grades = gradeRepository.findByStudentIdAndTermId(studentId, termId);
-        double totalScore = 0;
+        BigDecimal totalScore = BigDecimal.ZERO;
         int count = 0;
 
         for (Grade grade : grades) {
             ReportCardEntry entry = ReportCardEntry.builder()
                     .reportCardId(rc.getId())
                     .subjectId(grade.getSubjectId())
+                    .testScore(null) // Or some logic if needed
+                    .examScore(grade.getScore())
                     .totalScore(grade.getScore())
                     .gradeLetter(grade.getGradeLetter())
                     .remarks(grade.getRemarks())
@@ -67,14 +71,14 @@ public class ReportCardService {
                     .build();
             entryRepository.save(entry);
             if (grade.getScore() != null) {
-                totalScore += grade.getScore();
+                totalScore = totalScore.add(grade.getScore());
                 count++;
             }
         }
 
         if (count > 0) {
             rc.setTotalScore(totalScore);
-            rc.setAverageScore(totalScore / count);
+            rc.setAverageScore(totalScore.divide(new BigDecimal(count), 2, RoundingMode.HALF_UP));
             rc.setOverallGrade(calculateGradeLetter(rc.getAverageScore()));
         }
         rc = reportCardRepository.save(rc);
@@ -151,12 +155,14 @@ public class ReportCardService {
         return dto;
     }
 
-    private String calculateGradeLetter(double score) {
-        if (score >= 70) return "A";
-        if (score >= 60) return "B";
-        if (score >= 50) return "C";
-        if (score >= 45) return "D";
-        if (score >= 40) return "E";
+    private String calculateGradeLetter(BigDecimal score) {
+        if (score == null) return "F";
+        double s = score.doubleValue();
+        if (s >= 70) return "A";
+        if (s >= 60) return "B";
+        if (s >= 50) return "C";
+        if (s >= 45) return "D";
+        if (s >= 40) return "E";
         return "F";
     }
 }

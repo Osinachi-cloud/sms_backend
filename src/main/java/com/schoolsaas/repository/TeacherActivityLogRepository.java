@@ -13,5 +13,5 @@ import java.util.UUID;
 public interface TeacherActivityLogRepository extends JpaRepository<TeacherActivityLog, UUID> {
     Page<TeacherActivityLog> findBySchoolIdAndTeacherIdOrderByCreatedAtDesc(UUID schoolId, UUID teacherId, Pageable pageable);
     List<TeacherActivityLog> findBySchoolIdAndTeacherIdAndCreatedAtAfterOrderByCreatedAtDesc(UUID schoolId, UUID teacherId, java.time.LocalDateTime after);
-    List<TeacherActivityLog> findBySchoolIdOrderByCreatedAtDesc(UUID schoolId, Pageable pageable);
+    Page<TeacherActivityLog> findBySchoolIdOrderByCreatedAtDesc(UUID schoolId, Pageable pageable);
 }

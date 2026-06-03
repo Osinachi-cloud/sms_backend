@@ -7,6 +7,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -83,11 +84,11 @@ public class AdmissionApplication {
     @Column(name = "review_notes")
     private String reviewNotes;
 
-    @Column(name = "exam_score")
-    private Double examScore;
+    @Column(name = "exam_score", precision = 5, scale = 2)
+    private BigDecimal examScore;
 
-    @Column(name = "interview_score")
-    private Double interviewScore;
+    @Column(name = "interview_score", precision = 5, scale = 2)
+    private BigDecimal interviewScore;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")

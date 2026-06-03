@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -33,12 +34,14 @@ public class QuizSubmission {
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
-    private Double score;
+    @Column(precision = 5, scale = 2)
+    private BigDecimal score;
 
-    @Column(name = "total_marks")
-    private Double totalMarks;
+    @Column(name = "total_marks", precision = 5, scale = 2)
+    private BigDecimal totalMarks;
 
-    private Double percentage;
+    @Column(precision = 5, scale = 2)
+    private BigDecimal percentage;
 
     @Column(name = "grade_letter")
     private String gradeLetter;

@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +49,8 @@ public class QuizQuestion {
     private List<String> correctAnswers = List.of();
 
     @Builder.Default
-    private Double marks = 1.0;
+    @Column(precision = 5, scale = 2)
+    private BigDecimal marks = BigDecimal.ONE;
 
     @Column(name = "order_index")
     @Builder.Default

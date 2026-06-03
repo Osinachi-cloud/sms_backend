@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -45,11 +46,11 @@ public class ReportCard {
     @Builder.Default
     private Integer attendanceLate = 0;
 
-    @Column(name = "total_score")
-    private Double totalScore;
+    @Column(name = "total_score", precision = 5, scale = 2)
+    private BigDecimal totalScore;
 
-    @Column(name = "average_score")
-    private Double averageScore;
+    @Column(name = "average_score", precision = 5, scale = 2)
+    private BigDecimal averageScore;
 
     @Column(name = "overall_grade")
     private String overallGrade;

@@ -2,6 +2,7 @@ package com.schoolsaas.dto.quiz;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
@@ -11,7 +12,7 @@ public class QuizAnswerDto {
     private String userAnswer;
     private String correctAnswer;
     private Boolean isCorrect;
-    private Double marksObtained;
-    private Double totalMarks;
+    private BigDecimal marksObtained;
+    private BigDecimal totalMarks;
     private String explanation;
 }

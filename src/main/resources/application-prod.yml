@@ -1,0 +1,115 @@
+# ===================================================================
+# Production Profile Configuration (Railway / VPS / Render / Fly.io)
+# ===================================================================
+# Railway injects DATABASE_URL automatically.
+# All secrets are pulled from environment variables.
+# ===================================================================
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  application:
+    name: school-saas
+
+  # Railway provides DATABASE_URL as: postgresql://user:pass@host:port/db
+  # We parse it in code or use it directly if Spring Boot supports it.
+  # For standard Spring Boot, we can reference JDBC_URL env var.
+  datasource:
+    url: ${JDBC_DATABASE_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/schoolsaas}}
+    username: ${JDBC_DATABASE_USERNAME:${SPRING_DATASOURCE_USERNAME:}}
+    password: ${JDBC_DATABASE_PASSWORD:${SPRING_DATASOURCE_PASSWORD:}}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Use Flyway for migrations; never let Hibernate drop/create in prod
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  # Keep mail optional; if not configured, app still runs
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:true}
+
+  # Prevent devtools from running in production
+  devtools:
+    restart:
+      enabled: false
+    add-properties: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain
+  error:
+    include-message: never
+    include-stacktrace: never
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION_MS:900000}      # 15 minutes
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION_MS:604800000} # 7 days
+
+# OpenAI Configuration
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: ${OPENAI_MODEL:gpt-4o-mini}
+
+# Paystack Configuration
+paystack:
+  secret-key: ${PAYSTACK_SECRET_KEY}
+  public-key: ${PAYSTACK_PUBLIC_KEY}
+  base-url: https://api.paystack.co
+  callback-url: ${PAYSTACK_CALLBACK_URL}
+
+# CORS Configuration (comma-separated)
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+# Logging (reduce verbosity in production)
+logging:
+  level:
+    root: WARN
+    com.schoolsaas: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF

@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -39,9 +40,9 @@ public class QuizAnswer {
     @Column(name = "is_correct")
     private Boolean isCorrect;
 
-    @Column(name = "marks_obtained")
+    @Column(name = "marks_obtained", precision = 5, scale = 2)
     @Builder.Default
-    private Double marksObtained = 0.0;
+    private BigDecimal marksObtained = BigDecimal.ZERO;
 
     private String feedback;
 

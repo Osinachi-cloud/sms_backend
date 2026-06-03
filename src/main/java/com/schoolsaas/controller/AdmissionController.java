@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
@@ -37,8 +38,8 @@ public class AdmissionController {
             @RequestBody Map<String, Object> body) {
         String status = (String) body.get("status");
         String notes = (String) body.get("reviewNotes");
-        Double examScore = body.get("examScore") != null ? ((Number) body.get("examScore")).doubleValue() : null;
-        Double interviewScore = body.get("interviewScore") != null ? ((Number) body.get("interviewScore")).doubleValue() : null;
+        BigDecimal examScore = body.get("examScore") != null ? new BigDecimal(body.get("examScore").toString()) : null;
+        BigDecimal interviewScore = body.get("interviewScore") != null ? new BigDecimal(body.get("interviewScore").toString()) : null;
         return ResponseEntity.ok(admissionService.reviewApplication(applicationId, status, notes, examScore, interviewScore));
     }
 }

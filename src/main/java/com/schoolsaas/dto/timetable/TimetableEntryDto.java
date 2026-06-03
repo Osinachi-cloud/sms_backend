@@ -2,6 +2,7 @@ package com.schoolsaas.dto.timetable;
 
 import lombok.Data;
 
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Data

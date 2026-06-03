@@ -2,6 +2,7 @@ package com.schoolsaas.dto.admission;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -27,8 +28,8 @@ public class AdmissionApplicationDto {
     private UUID intendedClassId;
     private String intendedClassName;
     private String status;
-    private Double examScore;
-    private Double interviewScore;
+    private BigDecimal examScore;
+    private BigDecimal interviewScore;
     private String reviewNotes;
     private LocalDateTime createdAt;
     private Map<String, Object> metadata;

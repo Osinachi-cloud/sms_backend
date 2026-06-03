@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -43,13 +44,13 @@ public class Quiz {
     @Builder.Default
     private Integer durationMinutes = 30;
 
-    @Column(name = "total_marks")
+    @Column(name = "total_marks", precision = 5, scale = 2)
     @Builder.Default
-    private Double totalMarks = 100.0;
+    private BigDecimal totalMarks = new BigDecimal("100.00");
 
-    @Column(name = "pass_mark")
+    @Column(name = "pass_mark", precision = 5, scale = 2)
     @Builder.Default
-    private Double passMark = 40.0;
+    private BigDecimal passMark = new BigDecimal("40.00");
 
     @Column(name = "shuffle_questions")
     @Builder.Default

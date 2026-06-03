@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -42,9 +43,9 @@ public class BookBorrowal {
     @Builder.Default
     private String status = "BORROWED";
 
-    @Column(name = "fine_amount")
+    @Column(name = "fine_amount", precision = 10, scale = 2)
     @Builder.Default
-    private Double fineAmount = 0.0;
+    private BigDecimal fineAmount = BigDecimal.ZERO;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

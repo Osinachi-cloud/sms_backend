@@ -4,6 +4,7 @@ import com.schoolsaas.dto.library.LibraryBookDto;
 import com.schoolsaas.model.BookBorrowal;
 import com.schoolsaas.model.LibraryBook;
 import com.schoolsaas.repository.BookBorrowalRepository;
+import com.schoolsaas.repository.BookCategoryRepository;
 import com.schoolsaas.repository.LibraryBookRepository;
 import com.schoolsaas.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
