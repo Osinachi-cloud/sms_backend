@@ -19,7 +19,7 @@ cp .env.example .env
 # Edit .env with your secrets
 
 # 3. Run
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 ## Deploy to Railway

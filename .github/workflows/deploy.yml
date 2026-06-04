@@ -52,10 +52,10 @@ jobs:
           JWT_SECRET: test-jwt-secret-key-not-for-production-use-12345
           PAYSTACK_SECRET_KEY: sk_test_dummy
           OPENAI_API_KEY: sk-dummy
-        run: ./mvnw test -B
+        run: mvn test -B
 
       - name: Build JAR
-        run: ./mvnw package -DskipTests -B
+        run: mvn package -DskipTests -B
 
   # ------------------------------------------------------------------
   # PRODUCTION DEPLOY

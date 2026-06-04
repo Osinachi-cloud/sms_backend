@@ -8,19 +8,17 @@ FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 
 # Install dependencies for build
-RUN apk add --no-cache bash
+RUN apk add --no-cache bash maven
 
-# Copy Maven wrapper and POM first (cache layer)
-COPY mvnw .
-COPY .mvn .mvn
+# Copy POM first (cache layer)
 COPY pom.xml .
 
 # Download dependencies (cached if pom.xml unchanged)
-RUN ./mvnw dependency:go-offline -B
+RUN mvn dependency:go-offline -B
 
 # Copy source and build
 COPY src src
-RUN ./mvnw clean package -DskipTests -B && \
+RUN mvn clean package -DskipTests -B && \
     mkdir -p target/dependency && \
     (cd target/dependency; jar -xf ../*.jar)
 
