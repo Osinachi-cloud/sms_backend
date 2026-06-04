@@ -40,7 +40,7 @@ public class QuizAnswer {
     @Column(name = "is_correct")
     private Boolean isCorrect;
 
-    @Column(name = "marks_obtained", precision = 5, scale = 2)
+    @Column(name = "marks_obtained", columnDefinition = "DOUBLE PRECISION")
     @Builder.Default
     private BigDecimal marksObtained = BigDecimal.ZERO;
 

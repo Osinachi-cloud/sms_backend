@@ -84,10 +84,10 @@ public class AdmissionApplication {
     @Column(name = "review_notes")
     private String reviewNotes;
 
-    @Column(name = "exam_score", precision = 5, scale = 2)
+    @Column(name = "exam_score", columnDefinition = "DOUBLE PRECISION")
     private BigDecimal examScore;
 
-    @Column(name = "interview_score", precision = 5, scale = 2)
+    @Column(name = "interview_score", columnDefinition = "DOUBLE PRECISION")
     private BigDecimal interviewScore;
 
     @JdbcTypeCode(SqlTypes.JSON)

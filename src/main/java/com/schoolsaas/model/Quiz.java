@@ -44,11 +44,11 @@ public class Quiz {
     @Builder.Default
     private Integer durationMinutes = 30;
 
-    @Column(name = "total_marks", precision = 5, scale = 2)
+    @Column(name = "total_marks", columnDefinition = "DOUBLE PRECISION")
     @Builder.Default
     private BigDecimal totalMarks = new BigDecimal("100.00");
 
-    @Column(name = "pass_mark", precision = 5, scale = 2)
+    @Column(name = "pass_mark", columnDefinition = "DOUBLE PRECISION")
     @Builder.Default
     private BigDecimal passMark = new BigDecimal("40.00");
 
