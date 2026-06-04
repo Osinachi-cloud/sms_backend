@@ -34,7 +34,8 @@ public class FlutterwaveProvider implements PaymentGatewayProvider {
     @Value("${flutterwave.secret-key:}")
     private String globalSecretKey;
 
-    private static final String BASE_URL = "https://api.flutterwave.com/v3";
+    @Value("${flutterwave.base-url:https://api.flutterwave.com/v3}")
+    private String baseUrl;
 
     private final PaymentRepository paymentRepository;
     private final StudentRepository studentRepository;
@@ -102,7 +103,7 @@ public class FlutterwaveProvider implements PaymentGatewayProvider {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(
-                    BASE_URL + "/payments",
+                    baseUrl + "/payments",
                     entity,
                     String.class
             );
@@ -143,7 +144,7 @@ public class FlutterwaveProvider implements PaymentGatewayProvider {
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<String> response = restTemplate.exchange(
-                    BASE_URL + "/transactions/verify_by_reference?tx_ref=" + reference,
+                    baseUrl + "/transactions/verify_by_reference?tx_ref=" + reference,
                     HttpMethod.GET,
                     entity,
                     String.class
