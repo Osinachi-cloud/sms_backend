@@ -2,7 +2,7 @@
 -- Table creation is handled in V1, ensuring consistency
 -- This migration ensures the table exists and has the correct columns if it was somehow skipped or altered
 
-DO $$ 
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = 'content_versions') THEN
         CREATE TABLE content_versions (
@@ -23,10 +23,15 @@ ALTER TABLE content_versions ADD COLUMN IF NOT EXISTS version_number INT;
 ALTER TABLE content_versions ADD COLUMN IF NOT EXISTS created_by UUID;
 
 -- Ensure constraints for content_versions if they are missing
+-- Only add FK if users table exists (prevents errors on partial/fresh DB states)
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'content_versions' AND constraint_name = 'content_versions_created_by_fkey') THEN
-        ALTER TABLE content_versions ADD CONSTRAINT content_versions_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id);
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'users') THEN
+        IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'content_versions') THEN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'content_versions' AND constraint_name = 'content_versions_created_by_fkey') THEN
+                ALTER TABLE content_versions ADD CONSTRAINT content_versions_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id);
+            END IF;
+        END IF;
     END IF;
 END $$;
 

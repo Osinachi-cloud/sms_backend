@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: dev,demo
+    active: dev
   application:
     name: school-saas
 
@@ -59,7 +59,13 @@ openai:
 paystack:
   secret-key: ${PAYSTACK_SECRET_KEY:}
   public-key: ${PAYSTACK_PUBLIC_KEY:}
-  base-url: https://api.paystack.co
+  base-url: ${PAYSTACK_BASE_URL:https://api.paystack.co}
+
+# Flutterwave Configuration
+flutterwave:
+  secret-key: ${FLUTTERWAVE_SECRET_KEY:}
+  public-key: ${FLUTTERWAVE_PUBLIC_KEY:}
+  base-url: ${FLUTTERWAVE_BASE_URL:https://api.flutterwave.com/v3}
 
 # CORS Configuration
 cors:

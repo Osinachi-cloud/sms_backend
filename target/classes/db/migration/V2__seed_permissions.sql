@@ -13,7 +13,8 @@ INSERT INTO permissions (key, category, description) VALUES
 ('student.grades.manage', 'STUDENT', 'Enter/edit student grades'),
 ('student.attendance.read', 'STUDENT', 'View attendance records'),
 ('student.attendance.manage', 'STUDENT', 'Mark/edit attendance'),
-('student.reports.generate', 'STUDENT', 'Generate student report cards');
+('student.reports.generate', 'STUDENT', 'Generate student report cards')
+ON CONFLICT (key) DO NOTHING;
 
 -- Teacher & Class Management Permissions
 INSERT INTO permissions (key, category, description) VALUES
@@ -26,7 +27,8 @@ INSERT INTO permissions (key, category, description) VALUES
 ('class.read', 'CLASS', 'View classes'),
 ('class.create', 'CLASS', 'Create classes'),
 ('class.update', 'CLASS', 'Update classes'),
-('class.delete', 'CLASS', 'Delete classes');
+('class.delete', 'CLASS', 'Delete classes')
+ON CONFLICT (key) DO NOTHING;
 
 -- CMS Permissions
 INSERT INTO permissions (key, category, description) VALUES
@@ -42,7 +44,8 @@ INSERT INTO permissions (key, category, description) VALUES
 ('cms.content.approve', 'CMS', 'Approve content'),
 ('cms.content.reject', 'CMS', 'Reject content'),
 ('cms.content.delete', 'CMS', 'Delete content'),
-('cms.content.publish', 'CMS', 'Schedule/publish content');
+('cms.content.publish', 'CMS', 'Schedule/publish content')
+ON CONFLICT (key) DO NOTHING;
 
 -- Finance Permissions
 INSERT INTO permissions (key, category, description) VALUES
@@ -53,7 +56,8 @@ INSERT INTO permissions (key, category, description) VALUES
 ('payment.read', 'FINANCE', 'View payments'),
 ('payment.create', 'FINANCE', 'Record payments'),
 ('payment.track', 'FINANCE', 'Track payments'),
-('payment.report', 'FINANCE', 'Generate financial reports');
+('payment.report', 'FINANCE', 'Generate financial reports')
+ON CONFLICT (key) DO NOTHING;
 
 -- Role & Permission Management
 INSERT INTO permissions (key, category, description) VALUES
@@ -63,14 +67,16 @@ INSERT INTO permissions (key, category, description) VALUES
 ('role.delete', 'ROLE', 'Delete roles'),
 ('permission.read', 'ROLE', 'View permissions'),
 ('permission.assign', 'ROLE', 'Assign permissions to roles'),
-('user.role.assign', 'ROLE', 'Assign roles to users');
+('user.role.assign', 'ROLE', 'Assign roles to users')
+ON CONFLICT (key) DO NOTHING;
 
 -- Analytics Permissions
 INSERT INTO permissions (key, category, description) VALUES
 ('analytics.academic.view', 'ANALYTICS', 'View academic analytics'),
 ('analytics.finance.view', 'ANALYTICS', 'View financial analytics'),
 ('analytics.operations.view', 'ANALYTICS', 'View operational analytics'),
-('analytics.export', 'ANALYTICS', 'Export analytics data');
+('analytics.export', 'ANALYTICS', 'Export analytics data')
+ON CONFLICT (key) DO NOTHING;
 
 -- School Management Permissions
 INSERT INTO permissions (key, category, description) VALUES
@@ -78,7 +84,8 @@ INSERT INTO permissions (key, category, description) VALUES
 ('school.update', 'SCHOOL', 'Update school settings'),
 ('school.users.read', 'SCHOOL', 'View school users'),
 ('school.users.manage', 'SCHOOL', 'Manage school users'),
-('school.deletion.request', 'SCHOOL', 'Request school deletion');
+('school.deletion.request', 'SCHOOL', 'Request school deletion')
+ON CONFLICT (key) DO NOTHING;
 
 -- Academic Session Permissions
 INSERT INTO permissions (key, category, description) VALUES
@@ -90,5 +97,5 @@ INSERT INTO permissions (key, category, description) VALUES
 ('term.update', 'ACADEMIC', 'Update terms'),
 ('subject.read', 'ACADEMIC', 'View subjects'),
 ('subject.create', 'ACADEMIC', 'Create subjects'),
-('subject.update', 'ACADEMIC', 'Update subjects');
-
+('subject.update', 'ACADEMIC', 'Update subjects')
+ON CONFLICT (key) DO NOTHING;
