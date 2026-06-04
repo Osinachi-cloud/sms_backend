@@ -17,11 +17,6 @@ CREATE TABLE IF NOT EXISTS school_payment_gateway_configs (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_spgc_school_id ON school_payment_gateway_configs(school_id);
+CREATE INDEX IF NOT EXISTS idx_spgc_school_id ON school_payment_gateway_configs(school_id);
 
--- =====================================================
--- New Permission
--- =====================================================
-INSERT INTO permissions (key, category, description) VALUES
-('payment.gateway.manage', 'FINANCE', 'Configure school payment gateways (Paystack & Flutterwave)')
-ON CONFLICT (key) DO NOTHING;
+-- NOTE: permission seeding moved to PermissionInitializer.java
