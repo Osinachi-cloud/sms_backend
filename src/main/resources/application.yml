@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: dev,demo
+    active: dev
   application:
     name: school-saas
 
