@@ -48,6 +48,9 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true
+    # Set to false ONLY for first-time boot on a brand new empty DB to bypass migration issues.
+    # Re-enable after the first successful startup.
+    # enabled: ${FLYWAY_ENABLED:true}
 
   servlet:
     multipart:
