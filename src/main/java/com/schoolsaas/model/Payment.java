@@ -52,6 +52,10 @@ public class Payment {
     @Column(name = "paystack_access_code")
     private String paystackAccessCode;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private PaymentGatewayType gateway;
+
     @Column(nullable = false)
     @Builder.Default
     private String status = "PENDING";

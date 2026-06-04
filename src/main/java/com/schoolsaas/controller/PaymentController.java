@@ -2,7 +2,7 @@ package com.schoolsaas.controller;
 
 import com.schoolsaas.dto.payment.InitiatePaymentRequest;
 import com.schoolsaas.dto.payment.PaymentResponse;
-import com.schoolsaas.service.PaystackService;
+import com.schoolsaas.service.PaymentGatewayService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,7 +18,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PaymentController {
 
-    private final PaystackService paystackService;
+    private final PaymentGatewayService paymentGatewayService;
 
     @GetMapping
     @PreAuthorize("hasPermission(#schoolId, 'payment.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
@@ -26,7 +26,7 @@ public class PaymentController {
             @PathVariable UUID schoolId,
             @RequestParam(required = false) String status,
             Pageable pageable) {
-        return ResponseEntity.ok(paystackService.getPayments(schoolId, status, pageable));
+        return ResponseEntity.ok(paymentGatewayService.getPayments(schoolId, status, pageable));
     }
 
     @PostMapping("/initialize")
@@ -34,7 +34,7 @@ public class PaymentController {
     public ResponseEntity<PaymentResponse> initiatePayment(
             @PathVariable UUID schoolId,
             @Valid @RequestBody InitiatePaymentRequest request) {
-        return ResponseEntity.ok(paystackService.initiatePayment(schoolId, request));
+        return ResponseEntity.ok(paymentGatewayService.initiatePayment(schoolId, request));
     }
 
     @GetMapping("/verify/{reference}")
@@ -42,7 +42,7 @@ public class PaymentController {
     public ResponseEntity<PaymentResponse> verifyPayment(
             @PathVariable UUID schoolId,
             @PathVariable String reference) {
-        return ResponseEntity.ok(paystackService.verifyPayment(reference));
+        return ResponseEntity.ok(paymentGatewayService.verifyPayment(reference));
     }
 
     @GetMapping("/student/{studentId}")
@@ -51,6 +51,6 @@ public class PaymentController {
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId,
             Pageable pageable) {
-        return ResponseEntity.ok(paystackService.getStudentPayments(studentId, pageable));
+        return ResponseEntity.ok(paymentGatewayService.getStudentPayments(studentId, pageable));
     }
 }

@@ -1,0 +1,2 @@
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway VARCHAR(20);
+UPDATE payments SET gateway = 'PAYSTACK' WHERE gateway IS NULL;

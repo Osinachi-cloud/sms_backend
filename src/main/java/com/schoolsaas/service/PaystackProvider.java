@@ -7,14 +7,14 @@ import com.schoolsaas.dto.payment.PaymentResponse;
 import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
 import com.schoolsaas.model.Payment;
+import com.schoolsaas.model.PaymentGatewayType;
+import com.schoolsaas.model.SchoolPaymentGatewayConfig;
 import com.schoolsaas.model.Student;
 import com.schoolsaas.repository.PaymentRepository;
 import com.schoolsaas.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,10 +29,10 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PaystackService {
+public class PaystackProvider implements PaymentGatewayProvider {
 
     @Value("${paystack.secret-key}")
-    private String secretKey;
+    private String globalSecretKey;
 
     @Value("${paystack.base-url}")
     private String baseUrl;
@@ -42,8 +42,21 @@ public class PaystackService {
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @Override
+    public String getGatewayName() {
+        return "PAYSTACK";
+    }
+
+    private String resolveSecretKey(SchoolPaymentGatewayConfig config) {
+        if (config != null && config.getPaystackSecretKey() != null && !config.getPaystackSecretKey().isBlank()) {
+            return config.getPaystackSecretKey();
+        }
+        return globalSecretKey;
+    }
+
+    @Override
     @Transactional
-    public PaymentResponse initiatePayment(UUID schoolId, InitiatePaymentRequest request) {
+    public PaymentResponse initiatePayment(UUID schoolId, InitiatePaymentRequest request, SchoolPaymentGatewayConfig config) {
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student", "id", request.getStudentId()));
 
@@ -51,7 +64,7 @@ public class PaystackService {
             throw new ResourceNotFoundException("Student", "id", request.getStudentId());
         }
 
-        String reference = generateReference();
+        String reference = "PAY_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
         BigDecimal amountInKobo = request.getAmount().multiply(BigDecimal.valueOf(100));
 
         Payment payment = Payment.builder()
@@ -61,8 +74,11 @@ public class PaystackService {
                 .amount(request.getAmount())
                 .currency(request.getCurrency() != null ? request.getCurrency() : "NGN")
                 .paymentReference(reference)
+                .gateway(PaymentGatewayType.PAYSTACK)
                 .status("PENDING")
                 .build();
+
+        String secretKey = resolveSecretKey(config);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -114,10 +130,13 @@ public class PaystackService {
         }
     }
 
+    @Override
     @Transactional
-    public PaymentResponse verifyPayment(String reference) {
+    public PaymentResponse verifyPayment(String reference, SchoolPaymentGatewayConfig config) {
         Payment payment = paymentRepository.findByPaymentReference(reference)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", "reference", reference));
+
+        String secretKey = resolveSecretKey(config);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -165,8 +184,9 @@ public class PaystackService {
         return PaymentResponse.fromEntity(payment);
     }
 
+    @Override
     @Transactional
-    public void handleWebhook(String payload, String signature) {
+    public void handleWebhook(String payload, SchoolPaymentGatewayConfig config) {
         log.info("Received Paystack webhook");
         try {
             JsonNode event = objectMapper.readTree(payload);
@@ -175,30 +195,10 @@ public class PaystackService {
             if ("charge.success".equals(eventType)) {
                 JsonNode data = event.get("data");
                 String reference = data.get("reference").asText();
-                verifyPayment(reference);
+                verifyPayment(reference, config);
             }
         } catch (Exception e) {
             log.error("Error processing Paystack webhook", e);
         }
-    }
-
-    @Transactional(readOnly = true)
-    public Page<PaymentResponse> getPayments(UUID schoolId, String status, Pageable pageable) {
-        if (status != null && !status.isBlank()) {
-            return paymentRepository.findBySchoolIdAndStatus(schoolId, status, pageable)
-                    .map(PaymentResponse::fromEntity);
-        }
-        return paymentRepository.findBySchoolId(schoolId, pageable)
-                .map(PaymentResponse::fromEntity);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<PaymentResponse> getStudentPayments(UUID studentId, Pageable pageable) {
-        return paymentRepository.findByStudentId(studentId, pageable)
-                .map(PaymentResponse::fromEntity);
-    }
-
-    private String generateReference() {
-        return "PAY_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
     }
 }

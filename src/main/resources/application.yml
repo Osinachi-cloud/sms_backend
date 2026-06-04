@@ -61,6 +61,11 @@ paystack:
   public-key: ${PAYSTACK_PUBLIC_KEY:}
   base-url: https://api.paystack.co
 
+# Flutterwave Configuration
+flutterwave:
+  secret-key: ${FLUTTERWAVE_SECRET_KEY:}
+  public-key: ${FLUTTERWAVE_PUBLIC_KEY:}
+
 # CORS Configuration
 cors:
   allowed-origins: http://localhost:3000,http://localhost:3001

@@ -1,6 +1,6 @@
 package com.schoolsaas.controller;
 
-import com.schoolsaas.service.PaystackService;
+import com.schoolsaas.service.PaymentGatewayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,13 +10,21 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class WebhookController {
 
-    private final PaystackService paystackService;
+    private final PaymentGatewayService paymentGatewayService;
 
     @PostMapping("/paystack")
     public ResponseEntity<Void> paystackWebhook(
             @RequestBody String payload,
             @RequestHeader(value = "x-paystack-signature", required = false) String signature) {
-        paystackService.handleWebhook(payload, signature);
+        paymentGatewayService.handleWebhook(payload);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/flutterwave")
+    public ResponseEntity<Void> flutterwaveWebhook(
+            @RequestBody String payload,
+            @RequestHeader(value = "verif-hash", required = false) String signature) {
+        paymentGatewayService.handleWebhook(payload);
         return ResponseEntity.ok().build();
     }
 }

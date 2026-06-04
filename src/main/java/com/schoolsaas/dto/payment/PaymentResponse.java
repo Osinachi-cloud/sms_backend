@@ -26,6 +26,7 @@ public class PaymentResponse {
     private String paystackReference;
     private String paystackAccessCode;
     private String authorizationUrl;
+    private String gateway;
     private String status;
     private LocalDateTime paidAt;
     private Map<String, Object> metadata;
@@ -42,6 +43,7 @@ public class PaymentResponse {
                 .paymentReference(payment.getPaymentReference())
                 .paystackReference(payment.getPaystackReference())
                 .paystackAccessCode(payment.getPaystackAccessCode())
+                .gateway(payment.getGateway() != null ? payment.getGateway().name() : null)
                 .status(payment.getStatus())
                 .paidAt(payment.getPaidAt())
                 .metadata(payment.getMetadata())

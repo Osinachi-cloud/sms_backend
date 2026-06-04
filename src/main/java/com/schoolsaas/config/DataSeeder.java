@@ -358,6 +358,7 @@ public class DataSeeder implements CommandLineRunner {
         List<String> accountantKeys = List.of(
                 "student.read", "fee.read", "fee.create", "fee.update",
                 "payment.read", "payment.create", "payment.track", "payment.report",
+                "payment.gateway.manage",
                 "analytics.finance.view"
         );
         assignPermissions(roleId, accountantKeys);
