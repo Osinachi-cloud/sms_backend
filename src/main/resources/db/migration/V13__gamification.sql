@@ -22,6 +22,7 @@ CREATE TABLE user_badges (
     badge_id UUID REFERENCES badges(id) ON DELETE CASCADE,
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     earned_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(user_id, badge_id, school_id)
 );
 
