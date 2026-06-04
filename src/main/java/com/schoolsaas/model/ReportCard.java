@@ -46,10 +46,10 @@ public class ReportCard {
     @Builder.Default
     private Integer attendanceLate = 0;
 
-    @Column(name = "total_score", columnDefinition = "DOUBLE PRECISION")
+    @Column(name = "total_score", precision = 5, scale = 2)
     private BigDecimal totalScore;
 
-    @Column(name = "average_score", columnDefinition = "DOUBLE PRECISION")
+    @Column(name = "average_score", precision = 5, scale = 2)
     private BigDecimal averageScore;
 
     @Column(name = "overall_grade")

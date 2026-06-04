@@ -49,7 +49,7 @@ public class QuizQuestion {
     private List<String> correctAnswers = List.of();
 
     @Builder.Default
-    @Column(columnDefinition = "DOUBLE PRECISION")
+    @Column(precision = 5, scale = 2)
     private BigDecimal marks = BigDecimal.ONE;
 
     @Column(name = "order_index")

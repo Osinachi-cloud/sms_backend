@@ -27,13 +27,13 @@ public class ReportCardEntry {
     @Column(name = "subject_id")
     private UUID subjectId;
 
-    @Column(name = "test_score", columnDefinition = "DOUBLE PRECISION")
+    @Column(name = "test_score", precision = 5, scale = 2)
     private BigDecimal testScore;
 
-    @Column(name = "exam_score", columnDefinition = "DOUBLE PRECISION")
+    @Column(name = "exam_score", precision = 5, scale = 2)
     private BigDecimal examScore;
 
-    @Column(name = "total_score", columnDefinition = "DOUBLE PRECISION")
+    @Column(name = "total_score", precision = 5, scale = 2)
     private BigDecimal totalScore;
 
     @Column(name = "grade_letter")

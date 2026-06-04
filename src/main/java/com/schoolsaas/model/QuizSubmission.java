@@ -34,13 +34,13 @@ public class QuizSubmission {
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
-    @Column(columnDefinition = "DOUBLE PRECISION")
+    @Column(precision = 5, scale = 2)
     private BigDecimal score;
 
-    @Column(name = "total_marks", columnDefinition = "DOUBLE PRECISION")
+    @Column(name = "total_marks", precision = 5, scale = 2)
     private BigDecimal totalMarks;
 
-    @Column(columnDefinition = "DOUBLE PRECISION")
+    @Column(precision = 5, scale = 2)
     private BigDecimal percentage;
 
     @Column(name = "grade_letter")
