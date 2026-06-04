@@ -1,6 +1,4 @@
 spring:
-  profiles:
-    active: dev
   application:
     name: school-saas
 
@@ -12,7 +10,9 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none
+      # IMPORTANT: Set to 'update' for FIRST boot on an empty database.
+      # After the first successful startup, change this back to 'validate'.
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -20,7 +20,9 @@ spring:
         format_sql: true
 
   flyway:
-    enabled: true
+    # IMPORTANT: Set to 'false' for FIRST boot on an empty database.
+    # After the first successful startup, change this back to 'true'.
+    enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
 
