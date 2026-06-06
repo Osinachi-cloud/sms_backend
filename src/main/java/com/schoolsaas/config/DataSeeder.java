@@ -235,6 +235,10 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private User createUser(String email, String fullName, String encodedPassword, boolean isPlatformAdmin, String platformRole) {
+        Optional<User> existing = userRepository.findByEmail(email);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
         User user = new User();
         user.setEmail(email);
         user.setFullName(fullName);
