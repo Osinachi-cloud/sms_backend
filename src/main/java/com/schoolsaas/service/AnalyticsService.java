@@ -71,17 +71,17 @@ public class AnalyticsService {
                 COALESCE(SUM(amount), 0) as revenue
             FROM payments
             WHERE school_id = ? AND status = 'SUCCESS'
-            AND created_at >= CURRENT_DATE - INTERVAL '1 month' * ?
+            AND created_at >= CURRENT_DATE - INTERVAL '%d months'
             GROUP BY DATE_TRUNC('month', created_at)
             ORDER BY DATE_TRUNC('month', created_at)
-            """;
+            """.formatted(months);
 
         return jdbcTemplate.query(query, (rs, rowNum) -> {
             Map<String, Object> row = new HashMap<>();
             row.put("month", rs.getString("month"));
             row.put("revenue", rs.getBigDecimal("revenue"));
             return row;
-        }, schoolId, months);
+        }, schoolId);
     }
 
     @Transactional(readOnly = true)
@@ -92,17 +92,17 @@ public class AnalyticsService {
                 COUNT(*) as enrollments
             FROM students
             WHERE school_id = ?
-            AND admission_date >= CURRENT_DATE - INTERVAL '1 month' * ?
+            AND admission_date >= CURRENT_DATE - INTERVAL '%d months'
             GROUP BY DATE_TRUNC('month', admission_date)
             ORDER BY DATE_TRUNC('month', admission_date)
-            """;
+            """.formatted(months);
 
         return jdbcTemplate.query(query, (rs, rowNum) -> {
             Map<String, Object> row = new HashMap<>();
             row.put("month", rs.getString("month"));
             row.put("enrollments", rs.getInt("enrollments"));
             return row;
-        }, schoolId, months);
+        }, schoolId);
     }
 
     @Transactional(readOnly = true)
