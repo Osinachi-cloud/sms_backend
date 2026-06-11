@@ -6,8 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="6a3efcbc-8641-40a5-9e3d-8fb88aa309bc" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/schoolsaas/config/DataSeeder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/schoolsaas/config/DataSeeder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/schoolsaas/dto/auth/RegisterRequest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/schoolsaas/dto/auth/RegisterRequest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/school/CreateSchoolRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/school/CreateSchoolRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/SchoolService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/SchoolService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/schoolsaas/dto/school/CreateSchoolRequest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/schoolsaas/dto/school/CreateSchoolRequest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/schoolsaas/service/SchoolService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/schoolsaas/service/SchoolService.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -17,6 +19,10 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="KubernetesApiPersistence"><![CDATA[{}]]></component>
+  <component name="KubernetesApiProvider"><![CDATA[{
+  "isMigrated": true
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
@@ -83,7 +89,11 @@
       <option name="presentableId" value="Default" />
       <updated>1780498135035</updated>
       <workItem from="1780498136215" duration="23407000" />
-      <workItem from="1780904530804" duration="18698000" />
+      <workItem from="1780904530804" duration="22537000" />
+      <workItem from="1781122594571" duration="1926000" />
+      <workItem from="1781208448008" duration="2645000" />
+      <workItem from="1781211591654" duration="825000" />
+      <workItem from="1781212501940" duration="749000" />
     </task>
     <servers />
   </component>

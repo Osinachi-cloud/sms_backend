@@ -20,4 +20,14 @@ public class CreateSchoolRequest {
     private String address;
     private String logoUrl;
     private Map<String, Object> config;
+    
+    @NotBlank(message = "Admin full name is required")
+    private String adminFullName;
+
+    @NotBlank(message = "Admin email is required")
+    @Email(message = "Invalid admin email format")
+    private String adminEmail;
+
+    @NotBlank(message = "Admin password is required")
+    private String adminPassword;
 }

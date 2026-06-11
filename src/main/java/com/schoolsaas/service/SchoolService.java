@@ -6,6 +6,7 @@ import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
 import com.schoolsaas.model.Role;
 import com.schoolsaas.model.School;
+import com.schoolsaas.model.User;
 import com.schoolsaas.model.UserSchool;
 import com.schoolsaas.repository.RoleRepository;
 import com.schoolsaas.repository.SchoolRepository;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,11 +32,16 @@ public class SchoolService {
     private final UserRepository userRepository;
     private final UserSchoolRepository userSchoolRepository;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public SchoolResponse createSchool(CreateSchoolRequest request) {
         if (request.getSubdomain() != null && schoolRepository.existsBySubdomain(request.getSubdomain())) {
             throw new BadRequestException("Subdomain already taken");
+        }
+
+        if (userRepository.existsByEmail(request.getAdminEmail())) {
+            throw new BadRequestException("Admin email already registered");
         }
 
         String code = generateSchoolCode(request.getName());
@@ -54,7 +61,20 @@ public class SchoolService {
         school = schoolRepository.save(school);
         createDefaultRoles(school.getId());
 
-        log.info("School created: {} ({})", school.getName(), school.getCode());
+        // Create Super Admin User
+        User adminUser = User.builder()
+                .email(request.getAdminEmail())
+                .passwordHash(passwordEncoder.encode(request.getAdminPassword()))
+                .fullName(request.getAdminFullName())
+                .emailVerified(true)
+                .isActive(true)
+                .build();
+        adminUser = userRepository.save(adminUser);
+
+        // Assign Super Admin Role
+        assignSuperAdmin(school.getId(), adminUser.getId());
+
+        log.info("School created: {} ({}) with admin: {}", school.getName(), school.getCode(), adminUser.getEmail());
         return SchoolResponse.fromEntity(school);
     }
 
