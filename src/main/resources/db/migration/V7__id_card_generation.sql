@@ -2,7 +2,7 @@
 -- ID Card Generation
 -- =====================================================
 
-CREATE TABLE id_card_templates (
+CREATE TABLE IF NOT EXISTS id_card_templates (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE id_card_templates (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE student_id_cards (
+CREATE TABLE IF NOT EXISTS student_id_cards (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     student_id UUID REFERENCES students(id) ON DELETE CASCADE,
@@ -33,11 +33,22 @@ CREATE TABLE student_id_cards (
     UNIQUE(school_id, card_number)
 );
 
-CREATE INDEX idx_id_card_templates_school ON id_card_templates(school_id);
-CREATE INDEX idx_student_id_cards_school ON student_id_cards(school_id);
-CREATE INDEX idx_student_id_cards_student ON student_id_cards(student_id);
+CREATE INDEX IF NOT EXISTS idx_id_card_templates_school ON id_card_templates(school_id);
+CREATE INDEX IF NOT EXISTS idx_student_id_cards_school ON student_id_cards(school_id);
+CREATE INDEX IF NOT EXISTS idx_student_id_cards_student ON student_id_cards(student_id);
 
-CREATE TRIGGER update_id_card_templates_updated_at BEFORE UPDATE ON id_card_templates
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_student_id_cards_updated_at BEFORE UPDATE ON student_id_cards
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_id_card_templates_updated_at BEFORE UPDATE ON id_card_templates
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TRIGGER update_student_id_cards_updated_at BEFORE UPDATE ON student_id_cards
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

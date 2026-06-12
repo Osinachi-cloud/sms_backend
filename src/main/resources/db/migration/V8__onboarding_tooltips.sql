@@ -2,7 +2,7 @@
 -- Smart Onboarding / Tooltip System
 -- =====================================================
 
-CREATE TABLE onboarding_steps (
+CREATE TABLE IF NOT EXISTS onboarding_steps (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     step_key VARCHAR(100) UNIQUE NOT NULL,
     target_page VARCHAR(100) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE onboarding_steps (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE user_onboarding_progress (
+CREATE TABLE IF NOT EXISTS user_onboarding_progress (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     step_key VARCHAR(100) NOT NULL,
@@ -26,6 +26,13 @@ CREATE TABLE user_onboarding_progress (
     UNIQUE(user_id, step_key)
 );
 
-CREATE INDEX idx_onboarding_steps_page ON onboarding_steps(target_page);
-CREATE INDEX idx_onboarding_steps_order ON onboarding_steps(target_page, step_order);
-CREATE INDEX idx_user_onboarding_user ON user_onboarding_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_onboarding_steps_page ON onboarding_steps(target_page);
+CREATE INDEX IF NOT EXISTS idx_onboarding_steps_order ON onboarding_steps(target_page, step_order);
+CREATE INDEX IF NOT EXISTS idx_user_onboarding_user ON user_onboarding_progress(user_id);
+DO $$
+BEGIN
+    CREATE TRIGGER update_onboarding_steps_updated_at BEFORE UPDATE ON onboarding_steps
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

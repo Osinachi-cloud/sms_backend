@@ -6,17 +6,25 @@ import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
 import com.schoolsaas.model.School;
 import com.schoolsaas.model.Student;
+import com.schoolsaas.model.User;
+import com.schoolsaas.model.UserSchool;
+import com.schoolsaas.model.Role;
 import com.schoolsaas.repository.ClassRepository;
+import com.schoolsaas.repository.RoleRepository;
 import com.schoolsaas.repository.SchoolRepository;
 import com.schoolsaas.repository.StudentRepository;
+import com.schoolsaas.repository.UserRepository;
+import com.schoolsaas.repository.UserSchoolRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.UUID;
 
@@ -28,6 +36,10 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
     private final ClassRepository classRepository;
+    private final UserRepository userRepository;
+    private final UserSchoolRepository userSchoolRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public Page<StudentResponse> getStudents(UUID schoolId, String status, String search, Pageable pageable) {
@@ -91,6 +103,40 @@ public class StudentService {
                 .build();
 
         student = studentRepository.save(student);
+
+        // Create user account if email and password are provided
+        if (request.getEmail() != null && !request.getEmail().isBlank()
+                && request.getPassword() != null && !request.getPassword().isBlank()) {
+            if (!userRepository.existsByEmail(request.getEmail())) {
+                User user = User.builder()
+                        .email(request.getEmail())
+                        .passwordHash(passwordEncoder.encode(request.getPassword()))
+                        .fullName(request.getFullName())
+                        .phone(request.getPhone())
+                        .emailVerified(true)
+                        .isActive(true)
+                        .build();
+                user = userRepository.save(user);
+
+                student.setUserId(user.getId());
+                studentRepository.save(student);
+
+                Role studentRole = roleRepository.findBySchoolIdAndName(schoolId, "STUDENT")
+                        .orElseThrow(() -> new BadRequestException("STUDENT role not found for school"));
+
+                UserSchool userSchool = UserSchool.builder()
+                        .userId(user.getId())
+                        .schoolId(schoolId)
+                        .roleId(studentRole.getId())
+                        .isActive(true)
+                        .joinedAt(LocalDateTime.now())
+                        .build();
+                userSchoolRepository.save(userSchool);
+
+                log.info("User account created for student: {} in school {}", user.getId(), schoolId);
+            }
+        }
+
         log.info("Student created: {} in school {}", student.getId(), schoolId);
         return StudentResponse.fromEntity(student);
     }

@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =====================================================
 
 -- Schools table (multi-tenant anchor)
-CREATE TABLE schools (
+CREATE TABLE IF NOT EXISTS schools (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     subdomain VARCHAR(100) UNIQUE,
@@ -30,7 +30,7 @@ CREATE TABLE schools (
 );
 
 -- Users table (shared across schools)
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE users (
 );
 
 -- Master permissions list (fixed, seeded)
-CREATE TABLE permissions (
+CREATE TABLE IF NOT EXISTS permissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     key VARCHAR(100) UNIQUE NOT NULL,
     category VARCHAR(50) NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE permissions (
 );
 
 -- Custom roles (per school)
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -70,7 +70,7 @@ CREATE TABLE roles (
 );
 
 -- Role-Permission mapping
-CREATE TABLE role_permissions (
+CREATE TABLE IF NOT EXISTS role_permissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
     permission_key VARCHAR(100) REFERENCES permissions(key) ON DELETE CASCADE,
@@ -79,7 +79,7 @@ CREATE TABLE role_permissions (
 );
 
 -- User-School mapping with role
-CREATE TABLE user_schools (
+CREATE TABLE IF NOT EXISTS user_schools (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
@@ -96,7 +96,7 @@ CREATE TABLE user_schools (
 -- =====================================================
 
 -- Academic sessions/years
-CREATE TABLE academic_sessions (
+CREATE TABLE IF NOT EXISTS academic_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE academic_sessions (
 );
 
 -- Terms within academic session
-CREATE TABLE terms (
+CREATE TABLE IF NOT EXISTS terms (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     session_id UUID REFERENCES academic_sessions(id) ON DELETE CASCADE,
@@ -120,7 +120,7 @@ CREATE TABLE terms (
 );
 
 -- Classes/Grades
-CREATE TABLE classes (
+CREATE TABLE IF NOT EXISTS classes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE classes (
 );
 
 -- Subjects
-CREATE TABLE subjects (
+CREATE TABLE IF NOT EXISTS subjects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE subjects (
 );
 
 -- Class-Subject mapping
-CREATE TABLE class_subjects (
+CREATE TABLE IF NOT EXISTS class_subjects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
     subject_id UUID REFERENCES subjects(id) ON DELETE CASCADE,
@@ -155,7 +155,7 @@ CREATE TABLE class_subjects (
 );
 
 -- Teachers
-CREATE TABLE teachers (
+CREATE TABLE IF NOT EXISTS teachers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id),
@@ -174,7 +174,7 @@ CREATE TABLE teachers (
 );
 
 -- Teacher-Class assignments
-CREATE TABLE teacher_classes (
+CREATE TABLE IF NOT EXISTS teacher_classes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     teacher_id UUID REFERENCES teachers(id) ON DELETE CASCADE,
     class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
@@ -186,7 +186,7 @@ CREATE TABLE teacher_classes (
 );
 
 -- Students
-CREATE TABLE students (
+CREATE TABLE IF NOT EXISTS students (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id),
@@ -210,7 +210,7 @@ CREATE TABLE students (
 );
 
 -- Attendance
-CREATE TABLE attendance (
+CREATE TABLE IF NOT EXISTS attendance (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     student_id UUID REFERENCES students(id) ON DELETE CASCADE,
@@ -224,7 +224,7 @@ CREATE TABLE attendance (
 );
 
 -- Grades/Results
-CREATE TABLE grades (
+CREATE TABLE IF NOT EXISTS grades (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     student_id UUID REFERENCES students(id) ON DELETE CASCADE,
@@ -245,7 +245,7 @@ CREATE TABLE grades (
 -- =====================================================
 
 -- Content folders
-CREATE TABLE content_folders (
+CREATE TABLE IF NOT EXISTS content_folders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     parent_id UUID REFERENCES content_folders(id) ON DELETE CASCADE,
@@ -260,7 +260,7 @@ CREATE TABLE content_folders (
 );
 
 -- Content items
-CREATE TABLE content_items (
+CREATE TABLE IF NOT EXISTS content_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     folder_id UUID REFERENCES content_folders(id) ON DELETE SET NULL,
@@ -288,7 +288,7 @@ CREATE TABLE content_items (
 
 -- Content versions (for version history)
 -- Note: Structure reconciled with V4
-CREATE TABLE content_versions (
+CREATE TABLE IF NOT EXISTS content_versions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     content_id UUID REFERENCES content_items(id) ON DELETE CASCADE,
     version_number INT NOT NULL,
@@ -304,7 +304,7 @@ CREATE TABLE content_versions (
 -- =====================================================
 
 -- Fee categories
-CREATE TABLE fee_categories (
+CREATE TABLE IF NOT EXISTS fee_categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -315,7 +315,7 @@ CREATE TABLE fee_categories (
 );
 
 -- Fee structures
-CREATE TABLE fees (
+CREATE TABLE IF NOT EXISTS fees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     category_id UUID REFERENCES fee_categories(id),
@@ -332,7 +332,7 @@ CREATE TABLE fees (
 );
 
 -- Student fee assignments
-CREATE TABLE student_fees (
+CREATE TABLE IF NOT EXISTS student_fees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     student_id UUID REFERENCES students(id) ON DELETE CASCADE,
     fee_id UUID REFERENCES fees(id) ON DELETE CASCADE,
@@ -347,7 +347,7 @@ CREATE TABLE student_fees (
 );
 
 -- Payments (Paystack integration)
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     student_id UUID REFERENCES students(id),
@@ -370,7 +370,7 @@ CREATE TABLE payments (
 -- =====================================================
 
 -- Audit logs
-CREATE TABLE audit_logs (
+CREATE TABLE IF NOT EXISTS audit_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID,
     user_id UUID,
@@ -385,7 +385,7 @@ CREATE TABLE audit_logs (
 );
 
 -- Bulk enrollment jobs
-CREATE TABLE bulk_enrollment_jobs (
+CREATE TABLE IF NOT EXISTS bulk_enrollment_jobs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     created_by UUID REFERENCES users(id),
@@ -404,7 +404,7 @@ CREATE TABLE bulk_enrollment_jobs (
 );
 
 -- Refresh tokens
-CREATE TABLE refresh_tokens (
+CREATE TABLE IF NOT EXISTS refresh_tokens (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     token VARCHAR(500) NOT NULL,
@@ -414,7 +414,7 @@ CREATE TABLE refresh_tokens (
 );
 
 -- AI Tutor sessions
-CREATE TABLE ai_tutor_sessions (
+CREATE TABLE IF NOT EXISTS ai_tutor_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id),
     school_id UUID REFERENCES schools(id),
@@ -430,37 +430,37 @@ CREATE TABLE ai_tutor_sessions (
 -- INDEXES
 -- =====================================================
 
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_platform_role ON users(platform_role) WHERE platform_role IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_platform_role ON users(platform_role) WHERE platform_role IS NOT NULL;
 
-CREATE INDEX idx_schools_status ON schools(status);
-CREATE INDEX idx_schools_subdomain ON schools(subdomain);
+CREATE INDEX IF NOT EXISTS idx_schools_status ON schools(status);
+CREATE INDEX IF NOT EXISTS idx_schools_subdomain ON schools(subdomain);
 
-CREATE INDEX idx_user_schools_user ON user_schools(user_id);
-CREATE INDEX idx_user_schools_school ON user_schools(school_id);
+CREATE INDEX IF NOT EXISTS idx_user_schools_user ON user_schools(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_schools_school ON user_schools(school_id);
 
-CREATE INDEX idx_students_school ON students(school_id);
-CREATE INDEX idx_students_class ON students(class_id);
-CREATE INDEX idx_students_admission ON students(school_id, admission_number);
+CREATE INDEX IF NOT EXISTS idx_students_school ON students(school_id);
+CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_id);
+CREATE INDEX IF NOT EXISTS idx_students_admission ON students(school_id, admission_number);
 
-CREATE INDEX idx_teachers_school ON teachers(school_id);
+CREATE INDEX IF NOT EXISTS idx_teachers_school ON teachers(school_id);
 
-CREATE INDEX idx_content_items_school_status ON content_items(school_id, status);
-CREATE INDEX idx_content_items_folder ON content_items(folder_id);
-CREATE INDEX idx_content_items_teacher ON content_items(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_content_items_school_status ON content_items(school_id, status);
+CREATE INDEX IF NOT EXISTS idx_content_items_folder ON content_items(folder_id);
+CREATE INDEX IF NOT EXISTS idx_content_items_teacher ON content_items(teacher_id);
 
-CREATE INDEX idx_payments_school ON payments(school_id);
-CREATE INDEX idx_payments_student ON payments(student_id);
-CREATE INDEX idx_payments_reference ON payments(payment_reference);
+CREATE INDEX IF NOT EXISTS idx_payments_school ON payments(school_id);
+CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id);
+CREATE INDEX IF NOT EXISTS idx_payments_reference ON payments(payment_reference);
 
-CREATE INDEX idx_audit_logs_school ON audit_logs(school_id);
-CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_created ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_school ON audit_logs(school_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
 
-CREATE INDEX idx_grades_student ON grades(student_id);
-CREATE INDEX idx_grades_subject_term ON grades(subject_id, term_id);
+CREATE INDEX IF NOT EXISTS idx_grades_student ON grades(student_id);
+CREATE INDEX IF NOT EXISTS idx_grades_subject_term ON grades(subject_id, term_id);
 
-CREATE INDEX idx_attendance_student_date ON attendance(student_id, date);
+CREATE INDEX IF NOT EXISTS idx_attendance_student_date ON attendance(student_id, date);
 
 -- =====================================================
 -- TRIGGERS FOR UPDATED_AT
@@ -474,23 +474,58 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_schools_updated_at BEFORE UPDATE ON schools
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_schools_updated_at BEFORE UPDATE ON schools
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TRIGGER update_students_updated_at BEFORE UPDATE ON students
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_students_updated_at BEFORE UPDATE ON students
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TRIGGER update_teachers_updated_at BEFORE UPDATE ON teachers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_teachers_updated_at BEFORE UPDATE ON teachers
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TRIGGER update_content_items_updated_at BEFORE UPDATE ON content_items
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_content_items_updated_at BEFORE UPDATE ON content_items
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TRIGGER update_fees_updated_at BEFORE UPDATE ON fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_fees_updated_at BEFORE UPDATE ON fees
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

@@ -2,7 +2,7 @@
 -- Digital Library / E-Books
 -- =====================================================
 
-CREATE TABLE book_categories (
+CREATE TABLE IF NOT EXISTS book_categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE book_categories (
     UNIQUE(school_id, name)
 );
 
-CREATE TABLE library_books (
+CREATE TABLE IF NOT EXISTS library_books (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     category_id UUID REFERENCES book_categories(id),
@@ -35,7 +35,7 @@ CREATE TABLE library_books (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE book_borrowals (
+CREATE TABLE IF NOT EXISTS book_borrowals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     book_id UUID REFERENCES library_books(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -48,13 +48,24 @@ CREATE TABLE book_borrowals (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_library_books_school ON library_books(school_id);
-CREATE INDEX idx_library_books_category ON library_books(category_id);
-CREATE INDEX idx_library_books_title ON library_books(school_id, title);
-CREATE INDEX idx_book_borrowals_user ON book_borrowals(user_id);
-CREATE INDEX idx_book_borrowals_status ON book_borrowals(status);
+CREATE INDEX IF NOT EXISTS idx_library_books_school ON library_books(school_id);
+CREATE INDEX IF NOT EXISTS idx_library_books_category ON library_books(category_id);
+CREATE INDEX IF NOT EXISTS idx_library_books_title ON library_books(school_id, title);
+CREATE INDEX IF NOT EXISTS idx_book_borrowals_user ON book_borrowals(user_id);
+CREATE INDEX IF NOT EXISTS idx_book_borrowals_status ON book_borrowals(status);
 
-CREATE TRIGGER update_library_books_updated_at BEFORE UPDATE ON library_books
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_book_borrowals_updated_at BEFORE UPDATE ON book_borrowals
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_library_books_updated_at BEFORE UPDATE ON library_books
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TRIGGER update_book_borrowals_updated_at BEFORE UPDATE ON book_borrowals
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

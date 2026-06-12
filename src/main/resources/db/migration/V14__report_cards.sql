@@ -2,7 +2,7 @@
 -- Report Card Generation
 -- =====================================================
 
-CREATE TABLE report_card_templates (
+CREATE TABLE IF NOT EXISTS report_card_templates (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE report_card_templates (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE report_cards (
+CREATE TABLE IF NOT EXISTS report_cards (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     student_id UUID REFERENCES students(id) ON DELETE CASCADE,
@@ -46,7 +46,7 @@ CREATE TABLE report_cards (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE report_card_entries (
+CREATE TABLE IF NOT EXISTS report_card_entries (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     report_card_id UUID REFERENCES report_cards(id) ON DELETE CASCADE,
     subject_id UUID REFERENCES subjects(id),
@@ -59,13 +59,24 @@ CREATE TABLE report_card_entries (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_report_card_templates_school ON report_card_templates(school_id);
-CREATE INDEX idx_report_cards_school ON report_cards(school_id);
-CREATE INDEX idx_report_cards_student ON report_cards(student_id);
-CREATE INDEX idx_report_cards_term ON report_cards(term_id);
-CREATE INDEX idx_report_card_entries_card ON report_card_entries(report_card_id);
+CREATE INDEX IF NOT EXISTS idx_report_card_templates_school ON report_card_templates(school_id);
+CREATE INDEX IF NOT EXISTS idx_report_cards_school ON report_cards(school_id);
+CREATE INDEX IF NOT EXISTS idx_report_cards_student ON report_cards(student_id);
+CREATE INDEX IF NOT EXISTS idx_report_cards_term ON report_cards(term_id);
+CREATE INDEX IF NOT EXISTS idx_report_card_entries_card ON report_card_entries(report_card_id);
 
-CREATE TRIGGER update_report_card_templates_updated_at BEFORE UPDATE ON report_card_templates
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_report_cards_updated_at BEFORE UPDATE ON report_cards
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_report_card_templates_updated_at BEFORE UPDATE ON report_card_templates
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TRIGGER update_report_cards_updated_at BEFORE UPDATE ON report_cards
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

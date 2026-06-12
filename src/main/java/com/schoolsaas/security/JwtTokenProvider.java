@@ -7,9 +7,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 public class JwtTokenProvider {
@@ -27,7 +25,7 @@ public class JwtTokenProvider {
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
-    public String generateAccessToken(UUID userId, String email, String platformRole, UUID schoolId) {
+    public String generateAccessToken(UUID userId, String email, String platformRole, UUID schoolId, Set<String> permissions) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
 
@@ -43,6 +41,9 @@ public class JwtTokenProvider {
         }
         if (schoolId != null) {
             builder.claim("schoolId", schoolId.toString());
+        }
+        if (permissions != null && !permissions.isEmpty()) {
+            builder.claim("permissions", permissions);
         }
 
         return builder.signWith(secretKey).compact();
@@ -102,6 +103,16 @@ public class JwtTokenProvider {
     public String getTokenType(String token) {
         Claims claims = parseToken(token);
         return claims.get("type", String.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Set<String> getPermissionsFromToken(String token) {
+        Claims claims = parseToken(token);
+        Object perms = claims.get("permissions");
+        if (perms instanceof List<?>) {
+            return new HashSet<>((List<String>) perms);
+        }
+        return Set.of();
     }
 
     public long getRefreshTokenExpiration() {

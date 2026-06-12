@@ -28,5 +28,6 @@ public class CreateStudentRequest {
 
     private String parentPhone;
     private String admissionNumber;
+    private String password;
     private Map<String, Object> metadata;
 }

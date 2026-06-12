@@ -93,6 +93,9 @@ public class PermissionInitializer {
                 Permission.builder().key("school.users.read").category("SCHOOL").description("View school users").build(),
                 Permission.builder().key("school.users.manage").category("SCHOOL").description("Manage school users").build(),
                 Permission.builder().key("school.deletion.request").category("SCHOOL").description("Request school deletion").build(),
+                // User Management
+                Permission.builder().key("user.read").category("USER").description("View school users").build(),
+                Permission.builder().key("user.create").category("USER").description("Create school users").build(),
                 // Academic
                 Permission.builder().key("session.read").category("ACADEMIC").description("View academic sessions").build(),
                 Permission.builder().key("session.create").category("ACADEMIC").description("Create academic sessions").build(),

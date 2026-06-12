@@ -68,10 +68,12 @@ public class AuthService {
             throw new UnauthorizedException("Account is deactivated");
         }
 
+        UUID resolvedSchoolId = resolveSchoolContext(user, request.getSchoolId());
+
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        return generateAuthResponse(user, request.getSchoolId());
+        return generateAuthResponse(user, resolvedSchoolId);
     }
 
     @Transactional
@@ -124,11 +126,14 @@ public class AuthService {
     }
 
     private AuthResponse generateAuthResponse(User user, UUID schoolId) {
+        Set<String> permissions = resolvePermissions(user.getId(), schoolId);
+
         String accessToken = tokenProvider.generateAccessToken(
                 user.getId(),
                 user.getEmail(),
                 user.getPlatformRole(),
-                schoolId
+                schoolId,
+                permissions
         );
 
         String refreshToken = tokenProvider.generateRefreshToken(user.getId());
@@ -155,6 +160,40 @@ public class AuthService {
                         .schools(schools)
                         .build())
                 .build();
+    }
+
+    private Set<String> resolvePermissions(UUID userId, UUID schoolId) {
+        if (schoolId == null) {
+            return Set.of();
+        }
+        return userSchoolRepository.findByUserIdAndSchoolId(userId, schoolId)
+                .map(UserSchool::getRoleId)
+                .map(rolePermissionRepository::findPermissionKeysByRoleId)
+                .orElse(Set.of());
+    }
+
+    private UUID resolveSchoolContext(User user, UUID requestedSchoolId) {
+        if (user.isPlatformAdmin()) {
+            return null;
+        }
+
+        List<UserSchool> memberships = userSchoolRepository.findByUserId(user.getId()).stream()
+                .filter(UserSchool::getIsActive)
+                .collect(Collectors.toList());
+
+        if (requestedSchoolId != null) {
+            boolean hasAccess = memberships.stream().anyMatch(us -> us.getSchoolId().equals(requestedSchoolId));
+            if (!hasAccess) {
+                throw new UnauthorizedException("No access to this school");
+            }
+            return requestedSchoolId;
+        }
+
+        if (memberships.size() == 1) {
+            return memberships.get(0).getSchoolId();
+        }
+
+        return null;
     }
 
     private List<AuthResponse.SchoolInfo> getSchoolsForUser(UUID userId) {

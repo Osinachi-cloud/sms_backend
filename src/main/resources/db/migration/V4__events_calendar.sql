@@ -2,7 +2,7 @@
 -- Events & Calendar Management
 -- =====================================================
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE events (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE event_attendees (
+CREATE TABLE IF NOT EXISTS event_attendees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -28,9 +28,14 @@ CREATE TABLE event_attendees (
     UNIQUE(event_id, user_id)
 );
 
-CREATE INDEX idx_events_school ON events(school_id);
-CREATE INDEX idx_events_dates ON events(start_date, end_date);
-CREATE INDEX idx_event_attendees_event ON event_attendees(event_id);
+CREATE INDEX IF NOT EXISTS idx_events_school ON events(school_id);
+CREATE INDEX IF NOT EXISTS idx_events_dates ON events(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_event_attendees_event ON event_attendees(event_id);
 
-CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

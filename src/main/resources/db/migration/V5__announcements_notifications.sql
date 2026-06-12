@@ -2,7 +2,7 @@
 -- Announcements & Notifications
 -- =====================================================
 
-CREATE TABLE announcements (
+CREATE TABLE IF NOT EXISTS announcements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE announcements (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
@@ -30,10 +30,15 @@ CREATE TABLE notifications (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_announcements_school ON announcements(school_id);
-CREATE INDEX idx_announcements_pinned ON announcements(school_id, is_pinned);
-CREATE INDEX idx_notifications_user ON notifications(user_id);
-CREATE INDEX idx_notifications_unread ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_announcements_school ON announcements(school_id);
+CREATE INDEX IF NOT EXISTS idx_announcements_pinned ON announcements(school_id, is_pinned);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id, is_read);
 
-CREATE TRIGGER update_announcements_updated_at BEFORE UPDATE ON announcements
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_announcements_updated_at BEFORE UPDATE ON announcements
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

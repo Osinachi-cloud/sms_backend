@@ -333,7 +333,9 @@ public class DataSeeder implements CommandLineRunner {
                 "class.read", "class.create", "class.update", "class.delete",
                 "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.approve", "cms.content.publish",
                 "fee.read", "fee.create", "fee.update", "payment.read", "payment.create",
-                "analytics.academic.view", "analytics.finance.view", "school.read", "school.update"
+                "analytics.academic.view", "analytics.finance.view", "school.read", "school.update",
+                "role.read", "role.create", "role.delete",
+                "user.read", "user.create"
         );
         assignPermissions(roleId, adminKeys);
     }

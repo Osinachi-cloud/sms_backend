@@ -2,7 +2,7 @@
 -- Online Admission / Application Portal
 -- =====================================================
 
-CREATE TABLE admission_applications (
+CREATE TABLE IF NOT EXISTS admission_applications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     application_number VARCHAR(50) UNIQUE NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE admission_applications (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE admission_documents (
+CREATE TABLE IF NOT EXISTS admission_documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     application_id UUID REFERENCES admission_applications(id) ON DELETE CASCADE,
     document_type VARCHAR(50) NOT NULL CHECK (document_type IN ('BIRTH_CERTIFICATE', 'TRANSFER_CERTIFICATE', 'REPORT_CARD', 'PASSPORT_PHOTO', 'IDENTITY_PROOF', 'MEDICAL_RECORD', 'OTHER')),
@@ -41,9 +41,14 @@ CREATE TABLE admission_documents (
     uploaded_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_admission_applications_school ON admission_applications(school_id);
-CREATE INDEX idx_admission_applications_status ON admission_applications(school_id, status);
-CREATE INDEX idx_admission_documents_app ON admission_documents(application_id);
+CREATE INDEX IF NOT EXISTS idx_admission_applications_school ON admission_applications(school_id);
+CREATE INDEX IF NOT EXISTS idx_admission_applications_status ON admission_applications(school_id, status);
+CREATE INDEX IF NOT EXISTS idx_admission_documents_app ON admission_documents(application_id);
 
-CREATE TRIGGER update_admission_applications_updated_at BEFORE UPDATE ON admission_applications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_admission_applications_updated_at BEFORE UPDATE ON admission_applications
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

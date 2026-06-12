@@ -20,5 +20,6 @@ public class CreateTeacherRequest {
     private String specialization;
     private String qualification;
     private LocalDate dateOfJoining;
+    private String password;
     private Map<String, Object> metadata;
 }

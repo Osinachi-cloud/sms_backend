@@ -2,7 +2,7 @@
 -- Timetable / Schedule Management
 -- =====================================================
 
-CREATE TABLE timetable_periods (
+CREATE TABLE IF NOT EXISTS timetable_periods (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(50) NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE timetable_periods (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE timetable_entries (
+CREATE TABLE IF NOT EXISTS timetable_entries (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
@@ -29,11 +29,16 @@ CREATE TABLE timetable_entries (
     UNIQUE(school_id, class_id, day_of_week, period_id)
 );
 
-CREATE INDEX idx_timetable_periods_school ON timetable_periods(school_id);
-CREATE INDEX idx_timetable_entries_school ON timetable_entries(school_id);
-CREATE INDEX idx_timetable_entries_class ON timetable_entries(class_id);
-CREATE INDEX idx_timetable_entries_teacher ON timetable_entries(teacher_id);
-CREATE INDEX idx_timetable_entries_day ON timetable_entries(class_id, day_of_week);
+CREATE INDEX IF NOT EXISTS idx_timetable_periods_school ON timetable_periods(school_id);
+CREATE INDEX IF NOT EXISTS idx_timetable_entries_school ON timetable_entries(school_id);
+CREATE INDEX IF NOT EXISTS idx_timetable_entries_class ON timetable_entries(class_id);
+CREATE INDEX IF NOT EXISTS idx_timetable_entries_teacher ON timetable_entries(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_timetable_entries_day ON timetable_entries(class_id, day_of_week);
 
-CREATE TRIGGER update_timetable_entries_updated_at BEFORE UPDATE ON timetable_entries
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_timetable_entries_updated_at BEFORE UPDATE ON timetable_entries
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

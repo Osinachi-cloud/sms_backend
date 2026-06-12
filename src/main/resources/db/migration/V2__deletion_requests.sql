@@ -67,8 +67,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS deletion_request_timestamp ON deletion_requests;
-CREATE TRIGGER deletion_request_timestamp
-    BEFORE UPDATE ON deletion_requests
-    FOR EACH ROW
-    EXECUTE FUNCTION update_deletion_request_timestamp();
+DO $$
+BEGIN
+    CREATE TRIGGER deletion_request_timestamp
+        BEFORE UPDATE ON deletion_requests
+        FOR EACH ROW
+        EXECUTE FUNCTION update_deletion_request_timestamp();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

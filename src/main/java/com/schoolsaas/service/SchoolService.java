@@ -4,10 +4,14 @@ import com.schoolsaas.dto.school.CreateSchoolRequest;
 import com.schoolsaas.dto.school.SchoolResponse;
 import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
+import com.schoolsaas.model.Permission;
 import com.schoolsaas.model.Role;
+import com.schoolsaas.model.RolePermission;
 import com.schoolsaas.model.School;
 import com.schoolsaas.model.User;
 import com.schoolsaas.model.UserSchool;
+import com.schoolsaas.repository.PermissionRepository;
+import com.schoolsaas.repository.RolePermissionRepository;
 import com.schoolsaas.repository.RoleRepository;
 import com.schoolsaas.repository.SchoolRepository;
 import com.schoolsaas.repository.UserRepository;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -32,6 +37,8 @@ public class SchoolService {
     private final UserRepository userRepository;
     private final UserSchoolRepository userSchoolRepository;
     private final RoleRepository roleRepository;
+    private final PermissionRepository permissionRepository;
+    private final RolePermissionRepository rolePermissionRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -60,6 +67,7 @@ public class SchoolService {
 
         school = schoolRepository.save(school);
         createDefaultRoles(school.getId());
+        assignDefaultPermissions(school.getId());
 
         // Create Super Admin User
         User adminUser = User.builder()
@@ -202,6 +210,47 @@ public class SchoolService {
                     .isActive(true)
                     .build();
             roleRepository.save(role);
+        }
+    }
+
+    private void assignDefaultPermissions(UUID schoolId) {
+        Role superAdminRole = roleRepository.findBySchoolIdAndName(schoolId, "SUPER_ADMIN")
+                .orElse(null);
+        Role adminRole = roleRepository.findBySchoolIdAndName(schoolId, "ADMIN")
+                .orElse(null);
+
+        if (superAdminRole != null) {
+            List<Permission> allPermissions = permissionRepository.findAll();
+            for (Permission permission : allPermissions) {
+                RolePermission rp = RolePermission.builder()
+                        .roleId(superAdminRole.getId())
+                        .permissionKey(permission.getKey())
+                        .build();
+                rolePermissionRepository.save(rp);
+            }
+        }
+
+        if (adminRole != null) {
+            List<String> adminKeys = List.of(
+                    "student.read", "student.create", "student.update", "student.delete", "student.bulk.enroll",
+                    "student.grades.read", "student.grades.manage", "student.attendance.read", "student.attendance.manage",
+                    "teacher.read", "teacher.create", "teacher.update", "teacher.delete", "teacher.assign.class",
+                    "class.read", "class.create", "class.update", "class.delete",
+                    "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.approve", "cms.content.publish",
+                    "fee.read", "fee.create", "fee.update", "payment.read", "payment.create",
+                    "analytics.academic.view", "analytics.finance.view", "school.read", "school.update",
+                    "role.read", "role.create", "role.delete",
+                    "user.read", "user.create"
+            );
+            for (String key : adminKeys) {
+                if (permissionRepository.existsByKey(key)) {
+                    RolePermission rp = RolePermission.builder()
+                            .roleId(adminRole.getId())
+                            .permissionKey(key)
+                            .build();
+                    rolePermissionRepository.save(rp);
+                }
+            }
         }
     }
 }

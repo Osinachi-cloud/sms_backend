@@ -2,7 +2,7 @@
 -- Gamification: Badges, Points, Leaderboard
 -- =====================================================
 
-CREATE TABLE badges (
+CREATE TABLE IF NOT EXISTS badges (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE badges (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE user_badges (
+CREATE TABLE IF NOT EXISTS user_badges (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     badge_id UUID REFERENCES badges(id) ON DELETE CASCADE,
@@ -26,7 +26,7 @@ CREATE TABLE user_badges (
     UNIQUE(user_id, badge_id, school_id)
 );
 
-CREATE TABLE points_transactions (
+CREATE TABLE IF NOT EXISTS points_transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
@@ -38,7 +38,7 @@ CREATE TABLE points_transactions (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_badges_school ON badges(school_id);
-CREATE INDEX idx_user_badges_user ON user_badges(user_id);
-CREATE INDEX idx_points_transactions_user ON points_transactions(user_id);
-CREATE INDEX idx_points_transactions_school ON points_transactions(school_id);
+CREATE INDEX IF NOT EXISTS idx_badges_school ON badges(school_id);
+CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id);
+CREATE INDEX IF NOT EXISTS idx_points_transactions_user ON points_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_points_transactions_school ON points_transactions(school_id);

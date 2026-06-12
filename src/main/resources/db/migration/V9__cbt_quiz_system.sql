@@ -2,7 +2,7 @@
 -- CBT / Online Quiz System
 -- =====================================================
 
-CREATE TABLE quizzes (
+CREATE TABLE IF NOT EXISTS quizzes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE quizzes (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE quiz_questions (
+CREATE TABLE IF NOT EXISTS quiz_questions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
     question_text TEXT NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE quiz_questions (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE quiz_submissions (
+CREATE TABLE IF NOT EXISTS quiz_submissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
     student_id UUID REFERENCES students(id) ON DELETE CASCADE,
@@ -52,7 +52,7 @@ CREATE TABLE quiz_submissions (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE quiz_answers (
+CREATE TABLE IF NOT EXISTS quiz_answers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     submission_id UUID REFERENCES quiz_submissions(id) ON DELETE CASCADE,
     question_id UUID REFERENCES quiz_questions(id) ON DELETE CASCADE,
@@ -65,11 +65,16 @@ CREATE TABLE quiz_answers (
     UNIQUE(submission_id, question_id)
 );
 
-CREATE INDEX idx_quizzes_school ON quizzes(school_id);
-CREATE INDEX idx_quiz_questions_quiz ON quiz_questions(quiz_id);
-CREATE INDEX idx_quiz_submissions_quiz ON quiz_submissions(quiz_id);
-CREATE INDEX idx_quiz_submissions_student ON quiz_submissions(student_id);
-CREATE INDEX idx_quiz_answers_submission ON quiz_answers(submission_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_school ON quizzes(school_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_questions_quiz ON quiz_questions(quiz_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_submissions_quiz ON quiz_submissions(quiz_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_submissions_student ON quiz_submissions(student_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_answers_submission ON quiz_answers(submission_id);
 
-CREATE TRIGGER update_quizzes_updated_at BEFORE UPDATE ON quizzes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_quizzes_updated_at BEFORE UPDATE ON quizzes
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;

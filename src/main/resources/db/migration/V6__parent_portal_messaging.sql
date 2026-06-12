@@ -2,7 +2,7 @@
 -- Parent Portal & Messaging
 -- =====================================================
 
-CREATE TABLE parents (
+CREATE TABLE IF NOT EXISTS parents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
@@ -17,7 +17,7 @@ CREATE TABLE parents (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE parent_students (
+CREATE TABLE IF NOT EXISTS parent_students (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     parent_id UUID REFERENCES parents(id) ON DELETE CASCADE,
     student_id UUID REFERENCES students(id) ON DELETE CASCADE,
@@ -26,7 +26,7 @@ CREATE TABLE parent_students (
     UNIQUE(parent_id, student_id)
 );
 
-CREATE TABLE conversations (
+CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     school_id UUID REFERENCES schools(id) ON DELETE CASCADE,
     title VARCHAR(255),
@@ -36,7 +36,7 @@ CREATE TABLE conversations (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE conversation_participants (
+CREATE TABLE IF NOT EXISTS conversation_participants (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -45,7 +45,7 @@ CREATE TABLE conversation_participants (
     UNIQUE(conversation_id, user_id)
 );
 
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -56,15 +56,26 @@ CREATE TABLE messages (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_parents_school ON parents(school_id);
-CREATE INDEX idx_parent_students_parent ON parent_students(parent_id);
-CREATE INDEX idx_parent_students_student ON parent_students(student_id);
-CREATE INDEX idx_conversations_school ON conversations(school_id);
-CREATE INDEX idx_conversation_participants_user ON conversation_participants(user_id);
-CREATE INDEX idx_messages_conversation ON messages(conversation_id);
-CREATE INDEX idx_messages_created ON messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_parents_school ON parents(school_id);
+CREATE INDEX IF NOT EXISTS idx_parent_students_parent ON parent_students(parent_id);
+CREATE INDEX IF NOT EXISTS idx_parent_students_student ON parent_students(student_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_school ON conversations(school_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_participants_user ON conversation_participants(user_id);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(conversation_id, created_at);
 
-CREATE TRIGGER update_parents_updated_at BEFORE UPDATE ON parents
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_conversations_updated_at BEFORE UPDATE ON conversations
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    CREATE TRIGGER update_parents_updated_at BEFORE UPDATE ON parents
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TRIGGER update_conversations_updated_at BEFORE UPDATE ON conversations
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
