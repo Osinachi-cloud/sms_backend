@@ -297,6 +297,9 @@ public class BulkEnrollmentService {
         String parentEmail = getMappedValue(mapping, headerIndex, row, "parent_email");
         String parentPhone = normalizePhone(getMappedValue(mapping, headerIndex, row, "parent_phone"));
         String parentRelationship = getMappedValue(mapping, headerIndex, row, "parent_relationship");
+        if (parentRelationship != null && !parentRelationship.isBlank()) {
+            parentRelationship = parentRelationship.trim().toUpperCase();
+        }
         String parentAddress = getMappedValue(mapping, headerIndex, row, "parent_address");
         String parentOccupation = getMappedValue(mapping, headerIndex, row, "parent_occupation");
         String parentPassword = getMappedValue(mapping, headerIndex, row, "parent_password");

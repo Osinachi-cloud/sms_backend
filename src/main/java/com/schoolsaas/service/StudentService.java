@@ -193,7 +193,9 @@ public class StudentService {
                 .phone(payload.getPhone())
                 .address(payload.getAddress())
                 .occupation(payload.getOccupation())
-                .relationship(payload.getRelationship() != null ? payload.getRelationship() : "GUARDIAN")
+                .relationship(payload.getRelationship() != null && !payload.getRelationship().isBlank()
+                        ? payload.getRelationship().trim().toUpperCase()
+                        : "GUARDIAN")
                 .isActive(true)
                 .build();
 
