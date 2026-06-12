@@ -2,6 +2,7 @@ package com.schoolsaas.dto.student;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -28,6 +29,29 @@ public class CreateStudentRequest {
 
     private String parentPhone;
     private String admissionNumber;
+
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,32}$",
+             message = "Password must be 8-32 chars with uppercase, lowercase, number and special char (@$!%*?&)")
     private String password;
+
     private Map<String, Object> metadata;
+
+    // Nested parent payload for creating/linking a parent
+    private ParentPayload parent;
+
+    @Data
+    public static class ParentPayload {
+        private UUID parentId; // for existing parent
+        private String fullName;
+        @Email(message = "Invalid parent email")
+        private String email;
+        private String phone;
+        private String relationship;
+        private String address;
+        private String occupation;
+        @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,32}$",
+                 message = "Password must be 8-32 chars with uppercase, lowercase, number and special char (@$!%*?&)")
+        private String password;
+        private String status;
+    }
 }

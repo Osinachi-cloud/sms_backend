@@ -15,6 +15,9 @@ public interface TeacherRepository extends JpaRepository<Teacher, UUID> {
 
     Page<Teacher> findBySchoolId(UUID schoolId, Pageable pageable);
 
+    @Query("SELECT t FROM Teacher t WHERE t.schoolId = :schoolId AND t.status = 'ACTIVE'")
+    Page<Teacher> findActiveBySchoolId(UUID schoolId, Pageable pageable);
+
     Page<Teacher> findBySchoolIdAndStatus(UUID schoolId, String status, Pageable pageable);
 
     Optional<Teacher> findBySchoolIdAndEmployeeId(UUID schoolId, String employeeId);

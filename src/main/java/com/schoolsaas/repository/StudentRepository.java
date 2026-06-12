@@ -18,6 +18,9 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
 
     Page<Student> findBySchoolId(UUID schoolId, Pageable pageable);
 
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.status = 'ACTIVE'")
+    Page<Student> findActiveBySchoolId(UUID schoolId, Pageable pageable);
+
     Optional<Student> findBySchoolIdAndAdmissionNumber(UUID schoolId, String admissionNumber);
 
     Optional<Student> findBySchoolIdAndEmail(UUID schoolId, String email);
@@ -27,6 +30,9 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
     boolean existsBySchoolIdAndEmail(UUID schoolId, String email);
 
     List<Student> findBySchoolIdAndClassId(UUID schoolId, UUID classId);
+
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.classId = :classId AND s.status = 'ACTIVE'")
+    List<Student> findActiveBySchoolIdAndClassId(UUID schoolId, UUID classId);
 
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.status = 'ACTIVE' AND " +
            "(LOWER(s.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +

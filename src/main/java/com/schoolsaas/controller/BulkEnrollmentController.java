@@ -44,9 +44,11 @@ public class BulkEnrollmentController {
             @PathVariable UUID schoolId,
             @RequestParam("file") MultipartFile file,
             @RequestParam("mapping") String mappingJson,
+            @RequestParam(value = "entityType", defaultValue = "students") String entityType,
             @AuthenticationPrincipal UserPrincipal userPrincipal) throws IOException {
 
         Map<String, String> columnMapping = parseMapping(mappingJson);
+        columnMapping.put("__entityType", entityType);
 
         BulkEnrollmentJob job = bulkEnrollmentService.createJob(
                 schoolId,
@@ -55,7 +57,10 @@ public class BulkEnrollmentController {
                 columnMapping
         );
 
-        bulkEnrollmentService.processJobAsync(job.getId(), file);
+        // Read file bytes BEFORE the async call — MultipartFile streams are
+        // tied to the request thread and will be closed once this method returns.
+        byte[] fileBytes = file.getBytes();
+        bulkEnrollmentService.processJobAsync(job.getId(), fileBytes, file.getOriginalFilename());
 
         return ResponseEntity.ok(Map.of(
                 "jobId", job.getId(),

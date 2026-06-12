@@ -44,7 +44,7 @@ public class TeacherService {
             return teacherRepository.findBySchoolIdAndStatus(schoolId, status, pageable)
                     .map(TeacherResponse::fromEntity);
         }
-        return teacherRepository.findBySchoolId(schoolId, pageable)
+        return teacherRepository.findActiveBySchoolId(schoolId, pageable)
                 .map(TeacherResponse::fromEntity);
     }
 
@@ -85,13 +85,16 @@ public class TeacherService {
 
         teacher = teacherRepository.save(teacher);
 
-        // Create user account if email and password are provided
-        if (request.getEmail() != null && !request.getEmail().isBlank()
-                && request.getPassword() != null && !request.getPassword().isBlank()) {
+        // Create user account if email is provided (default password if blank)
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
             if (!userRepository.existsByEmail(request.getEmail())) {
+                String actualPassword = (request.getPassword() != null && !request.getPassword().isBlank())
+                        ? request.getPassword()
+                        : "Password@12";
+
                 User user = User.builder()
                         .email(request.getEmail())
-                        .passwordHash(passwordEncoder.encode(request.getPassword()))
+                        .passwordHash(passwordEncoder.encode(actualPassword))
                         .fullName(request.getFullName())
                         .phone(request.getPhone())
                         .emailVerified(true)
@@ -114,7 +117,9 @@ public class TeacherService {
                         .build();
                 userSchoolRepository.save(userSchool);
 
-                log.info("User account created for teacher: {} in school {}", user.getId(), schoolId);
+                log.info("User account created for teacher: {} in school {} with password [{}]",
+                        user.getId(), schoolId,
+                        (request.getPassword() != null && !request.getPassword().isBlank()) ? "provided" : "default");
             }
         }
 

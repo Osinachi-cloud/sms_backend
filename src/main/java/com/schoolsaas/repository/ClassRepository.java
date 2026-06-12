@@ -1,6 +1,8 @@
 package com.schoolsaas.repository;
 
 import com.schoolsaas.model.SchoolClass;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -18,6 +20,9 @@ public interface ClassRepository extends JpaRepository<SchoolClass, UUID> {
 
     List<SchoolClass> findBySchoolIdOrderByGradeLevelAscNameAsc(UUID schoolId);
 
+    @Query("SELECT c FROM SchoolClass c WHERE c.schoolId = :schoolId AND c.isActive = true")
+    Page<SchoolClass> findActiveBySchoolId(UUID schoolId, Pageable pageable);
+
     Optional<SchoolClass> findBySchoolIdAndNameAndSection(UUID schoolId, String name, String section);
 
     boolean existsBySchoolIdAndNameAndSection(UUID schoolId, String name, String section);
@@ -27,6 +32,13 @@ public interface ClassRepository extends JpaRepository<SchoolClass, UUID> {
 
     @Query("SELECT COUNT(c) FROM SchoolClass c WHERE c.schoolId = :schoolId AND c.isActive = true")
     long countActiveBySchoolId(UUID schoolId);
+
+    @Query("SELECT c FROM SchoolClass c WHERE c.schoolId = :schoolId AND c.isActive = true AND " +
+           "(LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(c.section) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<SchoolClass> searchBySchoolId(UUID schoolId, String search, Pageable pageable);
+
+    Page<SchoolClass> findBySchoolId(UUID schoolId, Pageable pageable);
 
     long countBySchoolId(UUID schoolId);
 }

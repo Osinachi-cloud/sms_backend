@@ -2,14 +2,14 @@ package com.schoolsaas.service;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvException;
+import com.schoolsaas.dto.parent.ParentDto;
 import com.schoolsaas.dto.student.CreateStudentRequest;
+import com.schoolsaas.dto.teacher.CreateTeacherRequest;
 import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
 import com.schoolsaas.model.BulkEnrollmentJob;
 import com.schoolsaas.model.School;
-import com.schoolsaas.model.Student;
 import com.schoolsaas.repository.BulkEnrollmentJobRepository;
-import com.schoolsaas.repository.ClassRepository;
 import com.schoolsaas.repository.SchoolRepository;
 import com.schoolsaas.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Year;
@@ -38,7 +39,9 @@ public class BulkEnrollmentService {
     private final BulkEnrollmentJobRepository jobRepository;
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
-    private final ClassRepository classRepository;
+    private final StudentService studentService;
+    private final TeacherService teacherService;
+    private final ParentService parentService;
 
     public record PreviewResult(
             List<String> headers,
@@ -132,11 +135,11 @@ public class BulkEnrollmentService {
     }
 
     @Async
-    @Transactional
-    public void processJobAsync(UUID jobId, MultipartFile file) {
+    public void processJobAsync(UUID jobId, byte[] fileBytes, String fileName) {
         BulkEnrollmentJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", "id", jobId));
 
+        // Save status immediately (no outer @Transactional, so this commits now)
         job.setStatus("PROCESSING");
         job.setStartedAt(LocalDateTime.now());
         jobRepository.save(job);
@@ -146,17 +149,21 @@ public class BulkEnrollmentService {
         AtomicInteger failed = new AtomicInteger(0);
         AtomicInteger total = new AtomicInteger(0);
 
-        try {
-            String filename = file.getOriginalFilename();
+        try (InputStream inputStream = new ByteArrayInputStream(fileBytes)) {
             Map<String, String> mapping = job.getColumnMapping();
+            String entityType = mapping.getOrDefault("__entityType", "students");
 
-            if (filename != null && filename.endsWith(".csv")) {
-                processCSV(file.getInputStream(), job.getSchoolId(), mapping, errors, successful, failed, total);
+            if (fileName != null && fileName.toLowerCase().endsWith(".csv")) {
+                processCSV(inputStream, job.getSchoolId(), mapping, entityType, errors, successful, failed, total);
             } else {
-                processExcel(file.getInputStream(), job.getSchoolId(), mapping, errors, successful, failed, total);
+                processExcel(inputStream, job.getSchoolId(), mapping, entityType, errors, successful, failed, total);
             }
 
-            job.setStatus("COMPLETED");
+            if (failed.get() > 0 && successful.get() == 0) {
+                job.setStatus("FAILED");
+            } else {
+                job.setStatus("COMPLETED");
+            }
         } catch (Exception e) {
             log.error("Bulk enrollment failed for job {}", jobId, e);
             job.setStatus("FAILED");
@@ -174,7 +181,7 @@ public class BulkEnrollmentService {
                 jobId, successful.get(), failed.get(), total.get());
     }
 
-    private void processCSV(InputStream inputStream, UUID schoolId, Map<String, String> mapping,
+    private void processCSV(InputStream inputStream, UUID schoolId, Map<String, String> mapping, String entityType,
                            List<String> errors, AtomicInteger successful, AtomicInteger failed, AtomicInteger total)
             throws IOException, CsvException {
         try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
@@ -191,7 +198,7 @@ public class BulkEnrollmentService {
                 total.incrementAndGet();
                 try {
                     String[] row = allRows.get(i);
-                    processRow(schoolId, mapping, headerIndex, row, i + 1);
+                    processRow(schoolId, entityType, mapping, headerIndex, row, i + 1);
                     successful.incrementAndGet();
                 } catch (Exception e) {
                     failed.incrementAndGet();
@@ -201,7 +208,7 @@ public class BulkEnrollmentService {
         }
     }
 
-    private void processExcel(InputStream inputStream, UUID schoolId, Map<String, String> mapping,
+    private void processExcel(InputStream inputStream, UUID schoolId, Map<String, String> mapping, String entityType,
                              List<String> errors, AtomicInteger successful, AtomicInteger failed, AtomicInteger total)
             throws IOException {
         try (Workbook workbook = new XSSFWorkbook(inputStream)) {
@@ -223,7 +230,7 @@ public class BulkEnrollmentService {
                         Cell cell = row.getCell(j);
                         rowData[j] = cell != null ? getCellValueAsString(cell) : "";
                     }
-                    processRow(schoolId, mapping, headerIndex, rowData, i + 1);
+                    processRow(schoolId, entityType, mapping, headerIndex, rowData, i + 1);
                     successful.incrementAndGet();
                 } catch (Exception e) {
                     failed.incrementAndGet();
@@ -233,8 +240,16 @@ public class BulkEnrollmentService {
         }
     }
 
-    private void processRow(UUID schoolId, Map<String, String> mapping, Map<String, Integer> headerIndex,
+    private void processRow(UUID schoolId, String entityType, Map<String, String> mapping, Map<String, Integer> headerIndex,
                            String[] row, int rowNumber) {
+        switch (entityType) {
+            case "teachers" -> processTeacherRow(schoolId, mapping, headerIndex, row);
+            case "parents" -> processParentRow(schoolId, mapping, headerIndex, row);
+            default -> processStudentRow(schoolId, mapping, headerIndex, row);
+        }
+    }
+
+    private void processStudentRow(UUID schoolId, Map<String, String> mapping, Map<String, Integer> headerIndex, String[] row) {
         String fullName = getMappedValue(mapping, headerIndex, row, "full_name");
         if (fullName == null || fullName.isBlank()) {
             throw new BadRequestException("Full name is required");
@@ -257,31 +272,119 @@ public class BulkEnrollmentService {
         if (classIdStr != null && !classIdStr.isBlank()) {
             try {
                 classId = UUID.fromString(classIdStr);
-                if (!classRepository.existsById(classId)) {
-                    throw new BadRequestException("Class not found: " + classIdStr);
-                }
             } catch (IllegalArgumentException e) {
                 throw new BadRequestException("Invalid class ID: " + classIdStr);
             }
         }
 
-        Student student = Student.builder()
-                .schoolId(schoolId)
-                .admissionNumber(admissionNumber)
-                .fullName(fullName)
-                .email(email)
-                .phone(getMappedValue(mapping, headerIndex, row, "phone"))
-                .gender(getMappedValue(mapping, headerIndex, row, "gender"))
-                .address(getMappedValue(mapping, headerIndex, row, "address"))
-                .classId(classId)
-                .parentName(getMappedValue(mapping, headerIndex, row, "parent_name"))
-                .parentEmail(getMappedValue(mapping, headerIndex, row, "parent_email"))
-                .parentPhone(getMappedValue(mapping, headerIndex, row, "parent_phone"))
-                .admissionDate(LocalDate.now())
-                .status("ACTIVE")
-                .build();
+        String gender = getMappedValue(mapping, headerIndex, row, "gender");
+        if (gender != null && !gender.isBlank()) {
+            gender = gender.toUpperCase();
+        }
 
-        studentRepository.save(student);
+        CreateStudentRequest request = new CreateStudentRequest();
+        request.setFullName(fullName);
+        request.setEmail(email);
+        request.setPhone(normalizePhone(getMappedValue(mapping, headerIndex, row, "phone")));
+        request.setGender(gender);
+        request.setAddress(getMappedValue(mapping, headerIndex, row, "address"));
+        request.setClassId(classId);
+        request.setAdmissionNumber(admissionNumber);
+        request.setPassword(getMappedValue(mapping, headerIndex, row, "password"));
+
+        // Build nested parent payload from bulk columns (supports both old and new key names)
+        String parentName = getMappedValueWithAliases(mapping, headerIndex, row, "parent_full_name", "parent_name");
+        String parentEmail = getMappedValue(mapping, headerIndex, row, "parent_email");
+        String parentPhone = normalizePhone(getMappedValue(mapping, headerIndex, row, "parent_phone"));
+        String parentRelationship = getMappedValue(mapping, headerIndex, row, "parent_relationship");
+        String parentAddress = getMappedValue(mapping, headerIndex, row, "parent_address");
+        String parentOccupation = getMappedValue(mapping, headerIndex, row, "parent_occupation");
+        String parentPassword = getMappedValue(mapping, headerIndex, row, "parent_password");
+
+        if (parentName != null && !parentName.isBlank()) {
+            CreateStudentRequest.ParentPayload parentPayload = new CreateStudentRequest.ParentPayload();
+            parentPayload.setFullName(parentName);
+            parentPayload.setEmail(parentEmail);
+            parentPayload.setPhone(parentPhone);
+            parentPayload.setRelationship(parentRelationship);
+            parentPayload.setAddress(parentAddress);
+            parentPayload.setOccupation(parentOccupation);
+            parentPayload.setPassword(parentPassword);
+            request.setParent(parentPayload);
+        } else {
+            // Fallback to flat parent fields for backward compatibility
+            request.setParentName(parentName);
+            request.setParentEmail(parentEmail);
+            request.setParentPhone(parentPhone);
+        }
+
+        studentService.createStudent(schoolId, request);
+    }
+
+    private void processTeacherRow(UUID schoolId, Map<String, String> mapping, Map<String, Integer> headerIndex, String[] row) {
+        String fullName = getMappedValue(mapping, headerIndex, row, "full_name");
+        if (fullName == null || fullName.isBlank()) {
+            throw new BadRequestException("Full name is required");
+        }
+
+        CreateTeacherRequest request = new CreateTeacherRequest();
+        request.setFullName(fullName);
+        request.setEmail(getMappedValue(mapping, headerIndex, row, "email"));
+        request.setPhone(normalizePhone(getMappedValue(mapping, headerIndex, row, "phone")));
+        request.setEmployeeId(getMappedValue(mapping, headerIndex, row, "employee_id"));
+        request.setSpecialization(getMappedValue(mapping, headerIndex, row, "specialization"));
+        request.setQualification(getMappedValue(mapping, headerIndex, row, "qualification"));
+        request.setPassword(getMappedValue(mapping, headerIndex, row, "password"));
+
+        String dateOfJoining = getMappedValue(mapping, headerIndex, row, "date_of_joining");
+        if (dateOfJoining != null && !dateOfJoining.isBlank()) {
+            request.setDateOfJoining(LocalDate.parse(dateOfJoining));
+        }
+
+        teacherService.createTeacher(schoolId, request);
+    }
+
+    private void processParentRow(UUID schoolId, Map<String, String> mapping, Map<String, Integer> headerIndex, String[] row) {
+        String fullName = getMappedValue(mapping, headerIndex, row, "full_name");
+        if (fullName == null || fullName.isBlank()) {
+            throw new BadRequestException("Full name is required");
+        }
+
+        ParentDto dto = new ParentDto();
+        dto.setFullName(fullName);
+        dto.setEmail(getMappedValue(mapping, headerIndex, row, "email"));
+        dto.setPhone(getMappedValue(mapping, headerIndex, row, "phone"));
+        dto.setAddress(getMappedValue(mapping, headerIndex, row, "address"));
+        dto.setOccupation(getMappedValue(mapping, headerIndex, row, "occupation"));
+        dto.setRelationship(getMappedValue(mapping, headerIndex, row, "relationship"));
+
+        parentService.createParent(schoolId, dto);
+    }
+
+    private String getMappedValueWithAliases(Map<String, String> mapping, Map<String, Integer> headerIndex,
+                                              String[] row, String... dbFields) {
+        for (String dbField : dbFields) {
+            String value = getMappedValue(mapping, headerIndex, row, dbField);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private String normalizePhone(String value) {
+        if (value == null || value.isBlank()) return null;
+        // Excel exports large numbers (e.g. phone numbers) in scientific notation.
+        // Convert 2.34809E+12 -> 2348090000000
+        String upper = value.toUpperCase().replace(" ", "");
+        if (upper.contains("E+") || upper.contains("E-")) {
+            try {
+                return new BigDecimal(value).toPlainString();
+            } catch (NumberFormatException e) {
+                return value.trim();
+            }
+        }
+        return value.trim();
     }
 
     private String getMappedValue(Map<String, String> mapping, Map<String, Integer> headerIndex,
@@ -341,12 +444,18 @@ public class BulkEnrollmentService {
                 Map.of("key", "email", "label", "Email", "required", false),
                 Map.of("key", "phone", "label", "Phone", "required", false),
                 Map.of("key", "gender", "label", "Gender", "required", false),
+                Map.of("key", "date_of_birth", "label", "Date of Birth", "required", false),
                 Map.of("key", "address", "label", "Address", "required", false),
                 Map.of("key", "admission_number", "label", "Admission Number", "required", false),
                 Map.of("key", "class_id", "label", "Class ID", "required", false),
-                Map.of("key", "parent_name", "label", "Parent Name", "required", false),
+                Map.of("key", "password", "label", "Password", "required", false),
+                Map.of("key", "parent_full_name", "label", "Parent Full Name", "required", false),
                 Map.of("key", "parent_email", "label", "Parent Email", "required", false),
-                Map.of("key", "parent_phone", "label", "Parent Phone", "required", false)
+                Map.of("key", "parent_phone", "label", "Parent Phone", "required", false),
+                Map.of("key", "parent_relationship", "label", "Parent Relationship", "required", false),
+                Map.of("key", "parent_address", "label", "Parent Address", "required", false),
+                Map.of("key", "parent_occupation", "label", "Parent Occupation", "required", false),
+                Map.of("key", "parent_password", "label", "Parent Password", "required", false)
         );
     }
 }
