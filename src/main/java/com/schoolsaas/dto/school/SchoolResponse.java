@@ -27,6 +27,17 @@ public class SchoolResponse {
     private Map<String, Object> config;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private SchoolAdminInfo admin;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SchoolAdminInfo {
+        private UUID id;
+        private String fullName;
+        private String email;
+    }
 
     public static SchoolResponse fromEntity(School school) {
         return SchoolResponse.builder()

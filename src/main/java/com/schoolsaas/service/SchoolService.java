@@ -2,20 +2,11 @@ package com.schoolsaas.service;
 
 import com.schoolsaas.dto.school.CreateSchoolRequest;
 import com.schoolsaas.dto.school.SchoolResponse;
+import com.schoolsaas.dto.school.UpdateSchoolRequest;
 import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
-import com.schoolsaas.model.Permission;
-import com.schoolsaas.model.Role;
-import com.schoolsaas.model.RolePermission;
-import com.schoolsaas.model.School;
-import com.schoolsaas.model.User;
-import com.schoolsaas.model.UserSchool;
-import com.schoolsaas.repository.PermissionRepository;
-import com.schoolsaas.repository.RolePermissionRepository;
-import com.schoolsaas.repository.RoleRepository;
-import com.schoolsaas.repository.SchoolRepository;
-import com.schoolsaas.repository.UserRepository;
-import com.schoolsaas.repository.UserSchoolRepository;
+import com.schoolsaas.model.*;
+import com.schoolsaas.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,6 +30,10 @@ public class SchoolService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final TeacherRepository teacherRepository;
+    private final StudentRepository studentRepository;
+    private final ParentRepository parentRepository;
+    private final AdmissionApplicationRepository admissionApplicationRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -83,30 +78,30 @@ public class SchoolService {
         assignSuperAdmin(school.getId(), adminUser.getId());
 
         log.info("School created: {} ({}) with admin: {}", school.getName(), school.getCode(), adminUser.getEmail());
-        return SchoolResponse.fromEntity(school);
+        return buildSchoolResponse(school);
     }
 
     @Transactional(readOnly = true)
     public Page<SchoolResponse> getAllSchools(Pageable pageable) {
         return schoolRepository.findAllActive(pageable)
-                .map(SchoolResponse::fromEntity);
+                .map(this::buildSchoolResponse);
     }
 
     @Transactional(readOnly = true)
     public Page<SchoolResponse> searchSchools(String search, Pageable pageable) {
         return schoolRepository.searchByNameOrCode(search, pageable)
-                .map(SchoolResponse::fromEntity);
+                .map(this::buildSchoolResponse);
     }
 
     @Transactional(readOnly = true)
     public SchoolResponse getSchool(UUID schoolId) {
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School", "id", schoolId));
-        return SchoolResponse.fromEntity(school);
+        return buildSchoolResponse(school);
     }
 
     @Transactional
-    public SchoolResponse updateSchool(UUID schoolId, CreateSchoolRequest request) {
+    public SchoolResponse updateSchool(UUID schoolId, UpdateSchoolRequest request) {
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School", "id", schoolId));
 
@@ -117,10 +112,18 @@ public class SchoolService {
             school.setSubdomain(request.getSubdomain());
         }
 
-        school.setName(request.getName());
-        school.setEmail(request.getEmail());
-        school.setPhone(request.getPhone());
-        school.setAddress(request.getAddress());
+        if (request.getName() != null) {
+            school.setName(request.getName());
+        }
+        if (request.getEmail() != null) {
+            school.setEmail(request.getEmail());
+        }
+        if (request.getPhone() != null) {
+            school.setPhone(request.getPhone());
+        }
+        if (request.getAddress() != null) {
+            school.setAddress(request.getAddress());
+        }
         if (request.getLogoUrl() != null) {
             school.setLogoUrl(request.getLogoUrl());
         }
@@ -129,8 +132,63 @@ public class SchoolService {
         }
 
         school = schoolRepository.save(school);
+
+        // Handle admin updates
+        if (request.getAdminUserId() != null || request.getAdminEmail() != null || request.getAdminFullName() != null || request.getAdminPassword() != null) {
+            updateSchoolAdmin(schoolId, request);
+        }
+
         log.info("School updated: {}", school.getId());
-        return SchoolResponse.fromEntity(school);
+        return buildSchoolResponse(school);
+    }
+
+    @Transactional
+    public void updateSchoolAdmin(UUID schoolId, UpdateSchoolRequest request) {
+        Role superAdminRole = roleRepository.findBySchoolIdAndName(schoolId, "SUPER_ADMIN")
+                .orElseThrow(() -> new BadRequestException("SUPER_ADMIN role not found for school"));
+
+        UserSchool userSchool = userSchoolRepository.findBySchoolIdAndRoleId(schoolId, superAdminRole.getId())
+                .stream().findFirst()
+                .orElseThrow(() -> new BadRequestException("No SUPER_ADMIN found for this school"));
+
+        User admin = userRepository.findById(userSchool.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userSchool.getUserId()));
+
+        String oldEmail = admin.getEmail();
+
+        if (request.getAdminFullName() != null) {
+            admin.setFullName(request.getAdminFullName());
+        }
+
+        if (request.getAdminEmail() != null && !request.getAdminEmail().equalsIgnoreCase(oldEmail)) {
+            if (userRepository.existsByEmail(request.getAdminEmail())) {
+                throw new BadRequestException("Admin email already registered by another user");
+            }
+            admin.setEmail(request.getAdminEmail());
+            // Cascade email change across all tables
+            cascadeEmailChange(oldEmail, request.getAdminEmail());
+        }
+
+        if (request.getAdminPassword() != null && !request.getAdminPassword().isBlank()) {
+            admin.setPasswordHash(passwordEncoder.encode(request.getAdminPassword()));
+        }
+
+        userRepository.save(admin);
+        log.info("School admin updated for school {}. Email changed from {} to {}", schoolId, oldEmail, admin.getEmail());
+    }
+
+    private void cascadeEmailChange(String oldEmail, String newEmail) {
+        if (oldEmail == null || oldEmail.isBlank() || newEmail == null || newEmail.isBlank()) {
+            return;
+        }
+        int teachersUpdated = teacherRepository.updateEmailByEmail(oldEmail, newEmail);
+        int studentsUpdated = studentRepository.updateEmailByEmail(oldEmail, newEmail);
+        int studentsParentUpdated = studentRepository.updateParentEmailByParentEmail(oldEmail, newEmail);
+        int parentsUpdated = parentRepository.updateEmailByEmail(oldEmail, newEmail);
+        int admissionsUpdated = admissionApplicationRepository.updateEmailByEmail(oldEmail, newEmail);
+        int admissionsGuardianUpdated = admissionApplicationRepository.updateGuardianEmailByEmail(oldEmail, newEmail);
+        log.info("Cascaded email change from {} to {}. Teachers: {}, Students: {}, StudentParents: {}, Parents: {}, Admissions: {}, AdmissionsGuardian: {}",
+                oldEmail, newEmail, teachersUpdated, studentsUpdated, studentsParentUpdated, parentsUpdated, admissionsUpdated, admissionsGuardianUpdated);
     }
 
     @Transactional
@@ -182,6 +240,25 @@ public class SchoolService {
         }
 
         log.info("SUPER_ADMIN assigned: user {} to school {}", userId, schoolId);
+    }
+
+    private SchoolResponse buildSchoolResponse(School school) {
+        SchoolResponse response = SchoolResponse.fromEntity(school);
+
+        // Find SUPER_ADMIN for this school
+        Role superAdminRole = roleRepository.findBySchoolIdAndName(school.getId(), "SUPER_ADMIN").orElse(null);
+        if (superAdminRole != null) {
+            userSchoolRepository.findBySchoolIdAndRoleId(school.getId(), superAdminRole.getId())
+                    .stream().findFirst()
+                    .flatMap(us -> userRepository.findById(us.getUserId()))
+                    .ifPresent(admin -> response.setAdmin(SchoolResponse.SchoolAdminInfo.builder()
+                            .id(admin.getId())
+                            .fullName(admin.getFullName())
+                            .email(admin.getEmail())
+                            .build()));
+        }
+
+        return response;
     }
 
     private String generateSchoolCode(String name) {
@@ -236,8 +313,10 @@ public class SchoolService {
                     "student.grades.read", "student.grades.manage", "student.attendance.read", "student.attendance.manage",
                     "teacher.read", "teacher.create", "teacher.update", "teacher.delete", "teacher.assign.class",
                     "class.read", "class.create", "class.update", "class.delete",
+                    "subject.read", "subject.create", "subject.update", "subject.delete",
                     "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.approve", "cms.content.publish",
                     "fee.read", "fee.create", "fee.update", "payment.read", "payment.create",
+                    "payment.gateway.manage", "payment.gateway.switch",
                     "analytics.academic.view", "analytics.finance.view", "school.read", "school.update",
                     "role.read", "role.create", "role.delete",
                     "user.read", "user.create"
@@ -246,6 +325,47 @@ public class SchoolService {
                 if (permissionRepository.existsByKey(key)) {
                     RolePermission rp = RolePermission.builder()
                             .roleId(adminRole.getId())
+                            .permissionKey(key)
+                            .build();
+                    rolePermissionRepository.save(rp);
+                }
+            }
+        }
+
+        // Teacher permissions
+        Role teacherRole = roleRepository.findBySchoolIdAndName(schoolId, "TEACHER")
+                .orElse(null);
+        if (teacherRole != null) {
+            List<String> teacherKeys = List.of(
+                    "student.read", "student.grades.read", "student.grades.manage",
+                    "student.attendance.read", "student.attendance.manage",
+                    "class.read", "subject.read",
+                    "cms.folder.read", "cms.content.read", "cms.content.create",
+                    "cms.content.edit", "cms.content.submit"
+            );
+            for (String key : teacherKeys) {
+                if (permissionRepository.existsByKey(key)) {
+                    RolePermission rp = RolePermission.builder()
+                            .roleId(teacherRole.getId())
+                            .permissionKey(key)
+                            .build();
+                    rolePermissionRepository.save(rp);
+                }
+            }
+        }
+
+        // Student permissions
+        Role studentRole = roleRepository.findBySchoolIdAndName(schoolId, "STUDENT")
+                .orElse(null);
+        if (studentRole != null) {
+            List<String> studentKeys = List.of(
+                    "student.grades.read", "student.attendance.read",
+                    "cms.content.read", "fee.read", "payment.read"
+            );
+            for (String key : studentKeys) {
+                if (permissionRepository.existsByKey(key)) {
+                    RolePermission rp = RolePermission.builder()
+                            .roleId(studentRole.getId())
                             .permissionKey(key)
                             .build();
                     rolePermissionRepository.save(rp);

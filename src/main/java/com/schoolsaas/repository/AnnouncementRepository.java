@@ -13,6 +13,12 @@ import java.util.UUID;
 @Repository
 public interface AnnouncementRepository extends JpaRepository<Announcement, UUID> {
     Page<Announcement> findBySchoolIdOrderByIsPinnedDescCreatedAtDesc(UUID schoolId, Pageable pageable);
+
     List<Announcement> findBySchoolIdAndTargetAudienceAndExpiresAtAfterOrderByIsPinnedDescCreatedAtDesc(UUID schoolId, String targetAudience, LocalDateTime now);
+
+    Page<Announcement> findBySchoolIdAndTargetAudienceAndExpiresAtAfterOrderByIsPinnedDescCreatedAtDesc(UUID schoolId, String targetAudience, LocalDateTime now, Pageable pageable);
+
     List<Announcement> findBySchoolIdAndExpiresAtAfterOrExpiresAtIsNullOrderByIsPinnedDescCreatedAtDesc(UUID schoolId, LocalDateTime now);
+
+    Page<Announcement> findBySchoolIdAndExpiresAtAfterOrExpiresAtIsNullOrderByIsPinnedDescCreatedAtDesc(UUID schoolId, LocalDateTime now, Pageable pageable);
 }

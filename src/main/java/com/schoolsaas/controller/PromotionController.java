@@ -4,6 +4,9 @@ import com.schoolsaas.dto.promotion.PromotionDto;
 import com.schoolsaas.security.SecurityUtils;
 import com.schoolsaas.service.PromotionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,11 +24,13 @@ public class PromotionController {
 
     @GetMapping("/classes/{classId}")
     @PreAuthorize("hasPermission(#schoolId, 'teacher.read') or hasPermission(#schoolId, 'class.read')")
-    public ResponseEntity<List<PromotionDto.StudentPromotionInfo>> getEligibleStudents(
+    public ResponseEntity<Page<PromotionDto.StudentPromotionInfo>> getEligibleStudents(
             @PathVariable UUID schoolId,
-            @PathVariable UUID classId) {
+            @PathVariable UUID classId,
+            Pageable pageable) {
         UUID teacherUserId = SecurityUtils.getCurrentUserId();
-        return ResponseEntity.ok(promotionService.getEligibleStudents(schoolId, classId, teacherUserId));
+        List<PromotionDto.StudentPromotionInfo> list = promotionService.getEligibleStudents(schoolId, classId, teacherUserId);
+        return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 
     @PostMapping("/students/{studentId}")

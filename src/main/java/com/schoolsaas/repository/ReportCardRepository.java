@@ -13,6 +13,10 @@ import java.util.UUID;
 @Repository
 public interface ReportCardRepository extends JpaRepository<ReportCard, UUID> {
     Page<ReportCard> findBySchoolId(UUID schoolId, Pageable pageable);
+
     List<ReportCard> findByStudentIdOrderByCreatedAtDesc(UUID studentId);
+
+    Page<ReportCard> findByStudentIdOrderByCreatedAtDesc(UUID studentId, Pageable pageable);
+
     Optional<ReportCard> findByStudentIdAndTermId(UUID studentId, UUID termId);
 }

@@ -2,6 +2,7 @@ package com.schoolsaas.service;
 
 import com.schoolsaas.dto.payment.InitiatePaymentRequest;
 import com.schoolsaas.dto.payment.PaymentResponse;
+import com.schoolsaas.dto.payment.RecordPaymentRequest;
 import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.model.Payment;
 import com.schoolsaas.model.PaymentGatewayType;
@@ -26,6 +27,7 @@ public class PaymentGatewayService {
     private final PaymentRepository paymentRepository;
     private final PaystackProvider paystackProvider;
     private final FlutterwaveProvider flutterwaveProvider;
+    private final PaymentCompletionService paymentCompletionService;
 
     @Transactional
     public SchoolPaymentGatewayConfig getOrCreateConfig(UUID schoolId) {
@@ -91,10 +93,46 @@ public class PaymentGatewayService {
 
         PaymentGatewayType gateway = payment.getGateway() != null ? payment.getGateway() : PaymentGatewayType.PAYSTACK;
 
+        PaymentResponse response;
         if (gateway == PaymentGatewayType.FLUTTERWAVE) {
-            return flutterwaveProvider.verifyPayment(reference, config);
+            response = flutterwaveProvider.verifyPayment(reference, config);
+        } else {
+            response = paystackProvider.verifyPayment(reference, config);
         }
-        return paystackProvider.verifyPayment(reference, config);
+
+        if ("SUCCESS".equals(response.getStatus())) {
+            paymentCompletionService.handlePaymentSuccess(payment.getId());
+        }
+
+        return response;
+    }
+
+    @Transactional
+    public PaymentResponse recordPayment(UUID schoolId, RecordPaymentRequest request) {
+        String reference = "REC_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
+
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        if (request.getDescription() != null) {
+            metadata.put("description", request.getDescription());
+        }
+        metadata.put("recorded_by", "admin");
+
+        Payment payment = Payment.builder()
+                .schoolId(schoolId)
+                .studentId(request.getStudentId())
+                .studentFeeId(request.getStudentFeeId())
+                .amount(request.getAmount())
+                .currency(request.getCurrency() != null ? request.getCurrency() : "NGN")
+                .paymentReference(reference)
+                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "cash")
+                .status("SUCCESS")
+                .metadata(metadata)
+                .build();
+
+        payment = paymentRepository.save(payment);
+        paymentCompletionService.handlePaymentSuccess(payment.getId());
+
+        return PaymentResponse.fromEntity(payment);
     }
 
     @Transactional(readOnly = true)
@@ -117,6 +155,7 @@ public class PaymentGatewayService {
     public void handleWebhook(String payload) {
         // Try to determine gateway from payload structure
         boolean handled = false;
+        Payment matchedPayment = null;
 
         // Paystack uses "event" and "data.reference"
         if (payload.contains("charge.success") || payload.contains("paystack")) {
@@ -130,6 +169,7 @@ public class PaymentGatewayService {
                         SchoolPaymentGatewayConfig config = getOrCreateConfig(payment.getSchoolId());
                         paystackProvider.handleWebhook(payload, config);
                         handled = true;
+                        matchedPayment = payment;
                     }
                 }
             } catch (Exception e) {
@@ -147,10 +187,18 @@ public class PaymentGatewayService {
                         SchoolPaymentGatewayConfig config = getOrCreateConfig(payment.getSchoolId());
                         flutterwaveProvider.handleWebhook(payload, config);
                         handled = true;
+                        matchedPayment = payment;
                     }
                 }
             } catch (Exception e) {
                 log.warn("Flutterwave webhook handling failed", e);
+            }
+        }
+
+        if (matchedPayment != null) {
+            Payment refreshed = paymentRepository.findById(matchedPayment.getId()).orElse(null);
+            if (refreshed != null && "SUCCESS".equals(refreshed.getStatus())) {
+                paymentCompletionService.handlePaymentSuccess(refreshed.getId());
             }
         }
 

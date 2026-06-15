@@ -3,6 +3,8 @@ package com.schoolsaas.service;
 import com.schoolsaas.dto.notification.NotificationDto;
 import com.schoolsaas.model.Notification;
 import com.schoolsaas.repository.NotificationRepository;
+import com.schoolsaas.repository.StudentRepository;
+import com.schoolsaas.repository.StudentSubjectEnrollmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final StudentSubjectEnrollmentRepository enrollmentRepository;
+    private final StudentRepository studentRepository;
 
     @Transactional
     public void sendNotification(UUID userId, UUID schoolId, String title, String message, String type, UUID entityId) {
@@ -57,6 +61,26 @@ public class NotificationService {
     @Transactional
     public void markAllAsRead(UUID userId) {
         notificationRepository.markAllAsRead(userId);
+    }
+
+    @Transactional
+    public void notifySubjectContentUploaded(UUID schoolId, UUID subjectId, String contentTitle, String subjectName) {
+        List<com.schoolsaas.model.StudentSubjectEnrollment> enrollments = enrollmentRepository.findBySchoolIdAndSubjectId(schoolId, subjectId);
+        for (com.schoolsaas.model.StudentSubjectEnrollment enrollment : enrollments) {
+            if (!"ENROLLED".equals(enrollment.getStatus())) continue;
+            studentRepository.findById(enrollment.getStudentId()).ifPresent(student -> {
+                if (student.getUserId() != null) {
+                    sendNotification(
+                            student.getUserId(),
+                            schoolId,
+                            "New Course Material: " + subjectName,
+                            "A new material \"" + contentTitle + "\" has been uploaded for " + subjectName + ".",
+                            "COURSE_CONTENT",
+                            subjectId
+                    );
+                }
+            });
+        }
     }
 
     private NotificationDto mapToDto(Notification n) {

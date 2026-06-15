@@ -83,7 +83,7 @@ public class MessagingService {
     }
 
     public Page<MessageDto> getMessages(UUID conversationId, Pageable pageable) {
-        return messageRepository.findByConversationIdOrderByCreatedAtDesc(conversationId, pageable)
+        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId, pageable)
                 .map(this::mapToDto);
     }
 

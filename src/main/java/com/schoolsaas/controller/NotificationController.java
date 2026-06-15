@@ -5,6 +5,7 @@ import com.schoolsaas.security.SecurityUtils;
 import com.schoolsaas.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,8 +26,9 @@ public class NotificationController {
     }
 
     @GetMapping("/unread")
-    public ResponseEntity<List<NotificationDto>> getUnreadNotifications() {
-        return ResponseEntity.ok(notificationService.getUnreadNotifications(SecurityUtils.getCurrentUserId()));
+    public ResponseEntity<Page<NotificationDto>> getUnreadNotifications(Pageable pageable) {
+        List<NotificationDto> list = notificationService.getUnreadNotifications(SecurityUtils.getCurrentUserId());
+        return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 
     @GetMapping("/count")

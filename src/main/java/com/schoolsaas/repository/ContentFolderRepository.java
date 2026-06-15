@@ -1,6 +1,8 @@
 package com.schoolsaas.repository;
 
 import com.schoolsaas.model.ContentFolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -13,7 +15,11 @@ public interface ContentFolderRepository extends JpaRepository<ContentFolder, UU
 
     List<ContentFolder> findBySchoolIdOrderBySortOrderAsc(UUID schoolId);
 
+    Page<ContentFolder> findBySchoolIdOrderBySortOrderAsc(UUID schoolId, Pageable pageable);
+
     List<ContentFolder> findBySchoolIdAndParentIdIsNullOrderBySortOrderAsc(UUID schoolId);
+
+    Page<ContentFolder> findBySchoolIdAndParentIdIsNullOrderBySortOrderAsc(UUID schoolId, Pageable pageable);
 
     List<ContentFolder> findByParentIdOrderBySortOrderAsc(UUID parentId);
 

@@ -6,6 +6,7 @@ import com.schoolsaas.security.SecurityUtils;
 import com.schoolsaas.service.MessagingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,8 +32,9 @@ public class MessageController {
     }
 
     @GetMapping("/conversations")
-    public ResponseEntity<List<ConversationDto>> listConversations(@PathVariable UUID schoolId) {
-        return ResponseEntity.ok(messagingService.listConversations(schoolId, SecurityUtils.getCurrentUserId()));
+    public ResponseEntity<Page<ConversationDto>> listConversations(@PathVariable UUID schoolId, Pageable pageable) {
+        List<ConversationDto> list = messagingService.listConversations(schoolId, SecurityUtils.getCurrentUserId());
+        return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 
     @PostMapping("/conversations/{conversationId}/messages")

@@ -115,7 +115,7 @@ public class DashboardService {
                         .build())
                 .collect(Collectors.toList());
 
-        AttendanceSummary attendance = attendanceService.getStudentAttendanceSummary(studentId);
+        AttendanceSummary attendance = attendanceService.getStudentAttendanceSummary(schoolId, studentId);
 
         StudentDashboard.FeeStatus feeStatus = StudentDashboard.FeeStatus.builder()
                 .totalDue(BigDecimal.ZERO)

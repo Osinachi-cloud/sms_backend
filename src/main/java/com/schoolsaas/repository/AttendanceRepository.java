@@ -33,4 +33,23 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
 
     @Query("SELECT COUNT(DISTINCT a.date) FROM Attendance a WHERE a.schoolId = :schoolId AND a.date >= :startDate")
     long countSchoolDaysSince(@Param("schoolId") UUID schoolId, @Param("startDate") LocalDate startDate);
+
+    // New methods for comprehensive attendance management
+    @Query("SELECT a FROM Attendance a WHERE a.schoolId = :schoolId AND a.classId = :classId AND a.date = :date")
+    List<Attendance> findBySchoolIdAndClassIdAndDate(@Param("schoolId") UUID schoolId, @Param("classId") UUID classId, @Param("date") LocalDate date);
+
+    @Query("SELECT a FROM Attendance a WHERE a.schoolId = :schoolId AND a.classId = :classId AND a.date BETWEEN :startDate AND :endDate ORDER BY a.date DESC")
+    List<Attendance> findBySchoolIdAndClassIdAndDateBetween(@Param("schoolId") UUID schoolId, @Param("classId") UUID classId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE a.schoolId = :schoolId AND a.classId = :classId AND a.date BETWEEN :startDate AND :endDate")
+    long countBySchoolIdAndClassIdAndDateBetween(@Param("schoolId") UUID schoolId, @Param("classId") UUID classId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT a FROM Attendance a WHERE a.schoolId = :schoolId AND a.classId = :classId ORDER BY a.date DESC, a.createdAt DESC")
+    List<Attendance> findBySchoolIdAndClassIdOrderByDateDesc(@Param("schoolId") UUID schoolId, @Param("classId") UUID classId);
+
+    @Query("SELECT a FROM Attendance a WHERE a.studentId IN :studentIds AND a.date BETWEEN :startDate AND :endDate ORDER BY a.date DESC")
+    List<Attendance> findByStudentIdInAndDateBetween(@Param("studentIds") List<UUID> studentIds, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT a FROM Attendance a WHERE a.studentId IN :studentIds ORDER BY a.date DESC")
+    List<Attendance> findByStudentIdIn(@Param("studentIds") List<UUID> studentIds);
 }

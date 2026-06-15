@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -44,4 +45,8 @@ public interface TeacherRepository extends JpaRepository<Teacher, UUID> {
     long countBySchoolIdAndStatus(UUID schoolId, String status);
 
     java.util.List<Teacher> findBySchoolId(UUID schoolId);
+
+    @Modifying
+    @Query("UPDATE Teacher t SET t.email = :newEmail WHERE t.email = :oldEmail")
+    int updateEmailByEmail(String oldEmail, String newEmail);
 }

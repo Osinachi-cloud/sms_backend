@@ -4,6 +4,7 @@ import com.schoolsaas.dto.reportcard.ReportCardDto;
 import com.schoolsaas.service.ReportCardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +40,8 @@ public class ReportCardController {
     }
 
     @GetMapping("/student/{studentId}")
-    public ResponseEntity<List<ReportCardDto>> getStudentReportCards(@PathVariable UUID studentId) {
-        return ResponseEntity.ok(reportCardService.getStudentReportCards(studentId));
+    public ResponseEntity<Page<ReportCardDto>> getStudentReportCards(@PathVariable UUID studentId, Pageable pageable) {
+        List<ReportCardDto> list = reportCardService.getStudentReportCards(studentId);
+        return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 }

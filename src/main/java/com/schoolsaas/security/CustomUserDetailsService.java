@@ -1,5 +1,6 @@
 package com.schoolsaas.security;
 
+import com.schoolsaas.repository.TemporaryUserPermissionRepository;
 import com.schoolsaas.repository.UserRepository;
 import com.schoolsaas.repository.UserSchoolRepository;
 import com.schoolsaas.repository.RolePermissionRepository;
@@ -12,6 +13,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -21,6 +23,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
     private final UserSchoolRepository userSchoolRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final TemporaryUserPermissionRepository temporaryUserPermissionRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -49,6 +52,13 @@ public class CustomUserDetailsService implements UserDetailsService {
                 roleId = userSchool.get().getRoleId();
                 permissions = rolePermissionRepository.findPermissionKeysByRoleId(roleId);
             }
+            // Load temporary permissions granted by super admin
+            List<String> tempPermissions = temporaryUserPermissionRepository
+                    .findByUserIdAndSchoolIdAndExpiresAtAfter(user.getId(), schoolId, LocalDateTime.now())
+                    .stream()
+                    .map(tp -> tp.getPermissionKey())
+                    .toList();
+            permissions.addAll(tempPermissions);
         }
 
         return UserPrincipal.builder()

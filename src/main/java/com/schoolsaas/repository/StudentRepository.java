@@ -4,6 +4,7 @@ import com.schoolsaas.model.Student;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -40,6 +41,17 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
            "LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Student> searchBySchoolId(UUID schoolId, String search, Pageable pageable);
 
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.classId = :classId AND s.status = 'ACTIVE' AND " +
+           "(LOWER(s.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(s.admissionNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Student> searchBySchoolIdAndClassId(UUID schoolId, UUID classId, String search, Pageable pageable);
+
+    Page<Student> findBySchoolIdAndClassIdAndStatus(UUID schoolId, UUID classId, String status, Pageable pageable);
+
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.classId = :classId AND s.status = 'ACTIVE'")
+    Page<Student> findActiveBySchoolIdAndClassId(UUID schoolId, UUID classId, Pageable pageable);
+
     @Query("SELECT COUNT(s) FROM Student s WHERE s.schoolId = :schoolId AND s.status = 'ACTIVE'")
     long countActiveBySchoolId(UUID schoolId);
 
@@ -59,4 +71,12 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
     long countByClassId(UUID classId);
 
     Optional<Student> findByUserId(UUID userId);
+
+    @Modifying
+    @Query("UPDATE Student s SET s.email = :newEmail WHERE s.email = :oldEmail")
+    int updateEmailByEmail(String oldEmail, String newEmail);
+
+    @Modifying
+    @Query("UPDATE Student s SET s.parentEmail = :newEmail WHERE s.parentEmail = :oldEmail")
+    int updateParentEmailByParentEmail(String oldEmail, String newEmail);
 }

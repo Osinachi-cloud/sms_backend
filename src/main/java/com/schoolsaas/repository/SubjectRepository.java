@@ -1,6 +1,8 @@
 package com.schoolsaas.repository;
 
 import com.schoolsaas.model.Subject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,5 +14,9 @@ public interface SubjectRepository extends JpaRepository<Subject, UUID> {
 
     List<Subject> findBySchoolIdAndIsActiveTrue(UUID schoolId);
 
+    Page<Subject> findBySchoolIdAndIsActiveTrue(UUID schoolId, Pageable pageable);
+
     List<Subject> findBySchoolId(UUID schoolId);
+
+    Page<Subject> findBySchoolId(UUID schoolId, Pageable pageable);
 }

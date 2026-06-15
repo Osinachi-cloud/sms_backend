@@ -33,6 +33,7 @@ public class StudentResponse {
     private String status;
     private Map<String, Object> metadata;
     private LocalDateTime createdAt;
+    private Boolean isClassTeacher;
 
     public static StudentResponse fromEntity(Student student) {
         return StudentResponse.builder()

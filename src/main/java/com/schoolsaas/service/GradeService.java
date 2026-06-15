@@ -26,7 +26,17 @@ public class GradeService {
     private final TermRepository termRepository;
 
     public List<GradeResponse> getStudentGrades(UUID schoolId, UUID studentId) {
+        return getStudentGrades(schoolId, studentId, null);
+    }
+
+    public List<GradeResponse> getStudentGrades(UUID schoolId, UUID studentId, List<UUID> subjectIds) {
         List<Grade> grades = gradeRepository.findBySchoolIdAndStudentId(schoolId, studentId);
+
+        if (subjectIds != null && !subjectIds.isEmpty()) {
+            grades = grades.stream()
+                    .filter(g -> g.getSubjectId() != null && subjectIds.contains(g.getSubjectId()))
+                    .collect(Collectors.toList());
+        }
 
         Map<UUID, Subject> subjectMap = subjectRepository.findBySchoolId(schoolId)
                 .stream().collect(Collectors.toMap(Subject::getId, s -> s));

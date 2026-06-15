@@ -74,6 +74,7 @@ public class PermissionInitializer {
                 Permission.builder().key("payment.track").category("FINANCE").description("Track payments").build(),
                 Permission.builder().key("payment.report").category("FINANCE").description("Generate financial reports").build(),
                 Permission.builder().key("payment.gateway.manage").category("FINANCE").description("Configure school payment gateways").build(),
+                Permission.builder().key("payment.gateway.switch").category("FINANCE").description("Switch active payment gateway").build(),
                 // Role
                 Permission.builder().key("role.read").category("ROLE").description("View roles").build(),
                 Permission.builder().key("role.create").category("ROLE").description("Create custom roles").build(),

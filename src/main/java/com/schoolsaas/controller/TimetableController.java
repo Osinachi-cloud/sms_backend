@@ -4,6 +4,9 @@ import com.schoolsaas.dto.timetable.TimetableEntryDto;
 import com.schoolsaas.dto.timetable.TimetablePeriodDto;
 import com.schoolsaas.service.TimetableService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,8 +26,9 @@ public class TimetableController {
     }
 
     @GetMapping("/periods")
-    public ResponseEntity<List<TimetablePeriodDto>> getPeriods(@PathVariable UUID schoolId) {
-        return ResponseEntity.ok(timetableService.getPeriods(schoolId));
+    public ResponseEntity<Page<TimetablePeriodDto>> getPeriods(@PathVariable UUID schoolId, Pageable pageable) {
+        List<TimetablePeriodDto> list = timetableService.getPeriods(schoolId);
+        return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 
     @PostMapping("/entries")

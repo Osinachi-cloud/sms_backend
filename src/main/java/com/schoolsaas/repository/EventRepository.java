@@ -13,6 +13,12 @@ import java.util.UUID;
 @Repository
 public interface EventRepository extends JpaRepository<Event, UUID> {
     Page<Event> findBySchoolId(UUID schoolId, Pageable pageable);
+
     List<Event> findBySchoolIdAndStartDateBetween(UUID schoolId, LocalDateTime start, LocalDateTime end);
+
+    Page<Event> findBySchoolIdAndStartDateBetween(UUID schoolId, LocalDateTime start, LocalDateTime end, Pageable pageable);
+
     List<Event> findBySchoolIdAndStartDateAfterOrderByStartDateAsc(UUID schoolId, LocalDateTime date);
+
+    Page<Event> findBySchoolIdAndStartDateAfterOrderByStartDateAsc(UUID schoolId, LocalDateTime date, Pageable pageable);
 }

@@ -7,6 +7,7 @@ import com.schoolsaas.service.ContentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,8 +26,9 @@ public class ContentController {
 
     @GetMapping("/folders")
     @PreAuthorize("hasPermission(#schoolId, 'cms.folder.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
-    public ResponseEntity<List<ContentFolder>> getFolders(@PathVariable UUID schoolId) {
-        return ResponseEntity.ok(contentService.getRootFolders(schoolId));
+    public ResponseEntity<Page<ContentFolder>> getFolders(@PathVariable UUID schoolId, Pageable pageable) {
+        List<ContentFolder> list = contentService.getRootFolders(schoolId);
+        return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 
     @PostMapping("/folders")

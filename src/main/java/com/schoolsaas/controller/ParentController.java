@@ -4,6 +4,7 @@ import com.schoolsaas.dto.parent.ParentDto;
 import com.schoolsaas.service.ParentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,8 @@ public class ParentController {
     }
 
     @GetMapping("/student/{studentId}")
-    public ResponseEntity<List<ParentDto>> getParentsByStudent(@PathVariable UUID studentId) {
-        return ResponseEntity.ok(parentService.getParentsByStudent(studentId));
+    public ResponseEntity<Page<ParentDto>> getParentsByStudent(@PathVariable UUID studentId, Pageable pageable) {
+        List<ParentDto> list = parentService.getParentsByStudent(studentId);
+        return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 }

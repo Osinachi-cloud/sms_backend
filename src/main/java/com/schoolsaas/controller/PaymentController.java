@@ -2,6 +2,7 @@ package com.schoolsaas.controller;
 
 import com.schoolsaas.dto.payment.InitiatePaymentRequest;
 import com.schoolsaas.dto.payment.PaymentResponse;
+import com.schoolsaas.dto.payment.RecordPaymentRequest;
 import com.schoolsaas.service.PaymentGatewayService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,14 @@ public class PaymentController {
             @PathVariable UUID schoolId,
             @Valid @RequestBody InitiatePaymentRequest request) {
         return ResponseEntity.ok(paymentGatewayService.initiatePayment(schoolId, request));
+    }
+
+    @PostMapping("/record")
+    @PreAuthorize("hasPermission(#schoolId, 'payment.create') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<PaymentResponse> recordPayment(
+            @PathVariable UUID schoolId,
+            @Valid @RequestBody RecordPaymentRequest request) {
+        return ResponseEntity.ok(paymentGatewayService.recordPayment(schoolId, request));
     }
 
     @GetMapping("/verify/{reference}")

@@ -279,7 +279,12 @@ public class BulkEnrollmentService {
 
         String gender = getMappedValue(mapping, headerIndex, row, "gender");
         if (gender != null && !gender.isBlank()) {
-            gender = gender.toUpperCase();
+            gender = gender.trim().toUpperCase();
+            if (!gender.equals("MALE") && !gender.equals("FEMALE") && !gender.equals("OTHER")) {
+                throw new BadRequestException("Invalid gender: " + gender + ". Must be MALE, FEMALE or OTHER.");
+            }
+        } else {
+            gender = null; // blank / empty string not allowed by DB check constraint
         }
 
         CreateStudentRequest request = new CreateStudentRequest();

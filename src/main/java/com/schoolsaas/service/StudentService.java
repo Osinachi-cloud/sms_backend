@@ -12,6 +12,8 @@ import com.schoolsaas.repository.PaymentRepository;
 import com.schoolsaas.repository.RoleRepository;
 import com.schoolsaas.repository.SchoolRepository;
 import com.schoolsaas.repository.StudentRepository;
+import com.schoolsaas.repository.TeacherClassRepository;
+import com.schoolsaas.repository.TeacherRepository;
 import com.schoolsaas.repository.UserRepository;
 import com.schoolsaas.repository.UserSchoolRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Year;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -41,6 +45,9 @@ public class StudentService {
     private final ParentRepository parentRepository;
     private final ParentStudentRepository parentStudentRepository;
     private final PaymentRepository paymentRepository;
+    private final AttendanceService attendanceService;
+    private final TeacherRepository teacherRepository;
+    private final TeacherClassRepository teacherClassRepository;
     private final PasswordEncoder passwordEncoder;
 
     private static final String DEFAULT_PASSWORD = "Password@12";
@@ -50,7 +57,22 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public Page<StudentResponse> getStudents(UUID schoolId, String status, String search, Pageable pageable) {
+    public Page<StudentResponse> getStudents(UUID schoolId, String status, String search, UUID classId, Pageable pageable) {
+        // If classId is provided, scope to that class
+        if (classId != null) {
+            if (search != null && !search.isBlank()) {
+                return studentRepository.searchBySchoolIdAndClassId(schoolId, classId, search, pageable)
+                        .map(StudentResponse::fromEntity);
+            }
+            if (status != null && !status.isBlank()) {
+                return studentRepository.findBySchoolIdAndClassIdAndStatus(schoolId, classId, status, pageable)
+                        .map(StudentResponse::fromEntity);
+            }
+            return studentRepository.findActiveBySchoolIdAndClassId(schoolId, classId, pageable)
+                    .map(StudentResponse::fromEntity);
+        }
+
+        // No class filter — return all (admin view)
         if (search != null && !search.isBlank()) {
             return studentRepository.searchBySchoolId(schoolId, search, pageable)
                     .map(StudentResponse::fromEntity);
@@ -75,6 +97,99 @@ public class StudentService {
         return StudentResponse.fromEntity(student);
     }
 
+    @Transactional(readOnly = true)
+    public com.schoolsaas.dto.student.StudentDetailResponse getStudentDetail(UUID schoolId, UUID studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student", "id", studentId));
+
+        if (!student.getSchoolId().equals(schoolId)) {
+            throw new ResourceNotFoundException("Student", "id", studentId);
+        }
+
+        // Get linked parents
+        List<ParentStudent> parentLinks = parentStudentRepository.findByStudentId(studentId);
+        List<UUID> parentIds = parentLinks.stream()
+                .map(com.schoolsaas.model.ParentStudent::getParentId)
+                .collect(Collectors.toList());
+        List<com.schoolsaas.model.Parent> parents = parentRepository.findAllById(parentIds);
+
+        List<com.schoolsaas.dto.student.StudentDetailResponse.ParentInfo> parentInfos = parents.stream()
+                .map(p -> {
+                    boolean isPrimary = parentLinks.stream()
+                            .anyMatch(link -> link.getParentId().equals(p.getId()) && Boolean.TRUE.equals(link.getIsPrimary()));
+                    return com.schoolsaas.dto.student.StudentDetailResponse.ParentInfo.builder()
+                            .id(p.getId())
+                            .fullName(p.getFullName())
+                            .email(p.getEmail())
+                            .phone(p.getPhone())
+                            .relationship(p.getRelationship())
+                            .address(p.getAddress())
+                            .occupation(p.getOccupation())
+                            .isPrimary(isPrimary)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // Get attendance summary
+        com.schoolsaas.dto.attendance.AttendanceSummary attendanceSummary = attendanceService.getStudentAttendanceSummary(schoolId, studentId);
+
+        return com.schoolsaas.dto.student.StudentDetailResponse.builder()
+                .id(student.getId())
+                .admissionNumber(student.getAdmissionNumber())
+                .fullName(student.getFullName())
+                .email(student.getEmail())
+                .phone(student.getPhone())
+                .dateOfBirth(student.getDateOfBirth())
+                .gender(student.getGender())
+                .address(student.getAddress())
+                .classId(student.getClassId())
+                .className(student.getSchoolClass() != null ? student.getSchoolClass().getName() : null)
+                .admissionDate(student.getAdmissionDate())
+                .status(student.getStatus())
+                .metadata(student.getMetadata())
+                .createdAt(student.getCreatedAt())
+                .parentName(student.getParentName())
+                .parentEmail(student.getParentEmail())
+                .parentPhone(student.getParentPhone())
+                .parents(parentInfos)
+                .attendanceSummary(attendanceSummary)
+                .limitedView(false)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public com.schoolsaas.dto.student.StudentDetailResponse getStudentDetailForSubjectTeacher(UUID schoolId, UUID studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student", "id", studentId));
+
+        if (!student.getSchoolId().equals(schoolId)) {
+            throw new ResourceNotFoundException("Student", "id", studentId);
+        }
+
+        return com.schoolsaas.dto.student.StudentDetailResponse.builder()
+                .id(student.getId())
+                .admissionNumber(student.getAdmissionNumber())
+                .fullName(student.getFullName())
+                .email(student.getEmail())
+                .phone(student.getPhone())
+                .dateOfBirth(student.getDateOfBirth())
+                .gender(student.getGender())
+                .address(student.getAddress())
+                .classId(student.getClassId())
+                .className(student.getSchoolClass() != null ? student.getSchoolClass().getName() : null)
+                .admissionDate(student.getAdmissionDate())
+                .status(student.getStatus())
+                .metadata(student.getMetadata())
+                .createdAt(student.getCreatedAt())
+                .parentName(null)
+                .parentEmail(null)
+                .parentPhone(null)
+                .parents(List.of())
+                .attendanceSummary(null)
+                .limitedView(true)
+                .build();
+    }
+
     @Transactional
     public StudentResponse createStudent(UUID schoolId, CreateStudentRequest request) {
         if (request.getEmail() != null && studentRepository.existsBySchoolIdAndEmail(schoolId, request.getEmail())) {
@@ -83,6 +198,17 @@ public class StudentService {
 
         if (request.getClassId() != null && !classRepository.existsById(request.getClassId())) {
             throw new BadRequestException("Class not found");
+        }
+
+        // Normalize and validate gender
+        String gender = request.getGender();
+        if (gender != null && !gender.isBlank()) {
+            gender = gender.trim().toUpperCase();
+            if (!gender.equals("MALE") && !gender.equals("FEMALE") && !gender.equals("OTHER")) {
+                throw new BadRequestException("Invalid gender: " + gender + ". Must be MALE, FEMALE or OTHER.");
+            }
+        } else {
+            gender = null;
         }
 
         String admissionNumber = request.getAdmissionNumber();
@@ -99,7 +225,7 @@ public class StudentService {
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .dateOfBirth(request.getDateOfBirth())
-                .gender(request.getGender())
+                .gender(gender)
                 .address(request.getAddress())
                 .classId(request.getClassId())
                 .parentName(request.getParentName())
@@ -280,7 +406,19 @@ public class StudentService {
         student.setFullName(request.getFullName());
         student.setPhone(request.getPhone());
         student.setDateOfBirth(request.getDateOfBirth());
-        student.setGender(request.getGender());
+
+        // Normalize and validate gender on update
+        String gender = request.getGender();
+        if (gender != null && !gender.isBlank()) {
+            gender = gender.trim().toUpperCase();
+            if (!gender.equals("MALE") && !gender.equals("FEMALE") && !gender.equals("OTHER")) {
+                throw new BadRequestException("Invalid gender: " + gender + ". Must be MALE, FEMALE or OTHER.");
+            }
+        } else {
+            gender = null;
+        }
+        student.setGender(gender);
+
         student.setAddress(request.getAddress());
         student.setClassId(request.getClassId());
         student.setParentName(request.getParentName());

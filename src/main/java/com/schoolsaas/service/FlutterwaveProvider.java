@@ -99,6 +99,12 @@ public class FlutterwaveProvider implements PaymentGatewayProvider {
             meta.put("school_id", schoolId.toString());
             meta.put("student_id", student.getId().toString());
             meta.put("student_name", student.getFullName());
+            if (request.getSubjectId() != null) {
+                meta.put("subject_id", request.getSubjectId().toString());
+            }
+            if (request.getDescription() != null) {
+                meta.put("description", request.getDescription());
+            }
             body.put("meta", meta);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);

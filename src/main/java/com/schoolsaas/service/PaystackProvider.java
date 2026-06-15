@@ -98,6 +98,12 @@ public class PaystackProvider implements PaymentGatewayProvider {
             metadata.put("school_id", schoolId.toString());
             metadata.put("student_id", student.getId().toString());
             metadata.put("student_name", student.getFullName());
+            if (request.getSubjectId() != null) {
+                metadata.put("subject_id", request.getSubjectId().toString());
+            }
+            if (request.getDescription() != null) {
+                metadata.put("description", request.getDescription());
+            }
             body.put("metadata", metadata);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);

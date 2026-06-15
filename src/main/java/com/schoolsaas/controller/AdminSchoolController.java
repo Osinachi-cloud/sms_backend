@@ -2,6 +2,7 @@ package com.schoolsaas.controller;
 
 import com.schoolsaas.dto.school.CreateSchoolRequest;
 import com.schoolsaas.dto.school.SchoolResponse;
+import com.schoolsaas.dto.school.UpdateSchoolRequest;
 import com.schoolsaas.service.SchoolService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +49,7 @@ public class AdminSchoolController {
     @PreAuthorize("hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
     public ResponseEntity<SchoolResponse> updateSchool(
             @PathVariable UUID schoolId,
-            @Valid @RequestBody CreateSchoolRequest request) {
+            @Valid @RequestBody UpdateSchoolRequest request) {
         return ResponseEntity.ok(schoolService.updateSchool(schoolId, request));
     }
 

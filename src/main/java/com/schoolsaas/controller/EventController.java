@@ -4,6 +4,7 @@ import com.schoolsaas.dto.event.EventDto;
 import com.schoolsaas.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,8 +30,9 @@ public class EventController {
     }
 
     @GetMapping("/upcoming")
-    public ResponseEntity<List<EventDto>> getUpcomingEvents(@PathVariable UUID schoolId) {
-        return ResponseEntity.ok(eventService.getUpcomingEvents(schoolId));
+    public ResponseEntity<Page<EventDto>> getUpcomingEvents(@PathVariable UUID schoolId, Pageable pageable) {
+        List<EventDto> list = eventService.getUpcomingEvents(schoolId);
+        return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 
     @GetMapping("/{eventId}")
