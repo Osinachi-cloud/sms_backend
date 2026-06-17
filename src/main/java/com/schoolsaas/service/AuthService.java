@@ -5,9 +5,7 @@ import com.schoolsaas.dto.auth.LoginRequest;
 import com.schoolsaas.dto.auth.RegisterRequest;
 import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.UnauthorizedException;
-import com.schoolsaas.model.RefreshToken;
-import com.schoolsaas.model.User;
-import com.schoolsaas.model.UserSchool;
+import com.schoolsaas.model.*;
 import com.schoolsaas.repository.*;
 import com.schoolsaas.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +29,9 @@ public class AuthService {
     private final RolePermissionRepository rolePermissionRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final SchoolRepository schoolRepository;
+    private final StudentRepository studentRepository;
+    private final ParentRepository parentRepository;
+    private final ParentStudentRepository parentStudentRepository;
     private final JwtTokenProvider tokenProvider;
     private final PasswordEncoder passwordEncoder;
 
@@ -147,6 +148,32 @@ public class AuthService {
 
         List<AuthResponse.SchoolInfo> schools = getSchoolsForUser(user.getId());
 
+        UUID studentId = schoolId != null
+                ? studentRepository.findByUserId(user.getId()).map(s -> s.getId()).orElse(null)
+                : null;
+
+        List<AuthResponse.ChildInfo> children = new java.util.ArrayList<>();
+        if (schoolId != null) {
+            var parentOpt = parentRepository.findByUserIdAndSchoolId(user.getId(), schoolId);
+            if (parentOpt.isPresent()) {
+                var parent = parentOpt.get();
+                List<UUID> childIds = parentStudentRepository.findByParentId(parent.getId()).stream()
+                        .map(ParentStudent::getStudentId)
+                        .collect(java.util.stream.Collectors.toList());
+                if (!childIds.isEmpty()) {
+                    List<Student> childStudents = studentRepository.findAllById(childIds);
+                    for (Student s : childStudents) {
+                        children.add(AuthResponse.ChildInfo.builder()
+                                .id(s.getId())
+                                .fullName(s.getFullName())
+                                .className(s.getSchoolClass() != null ? s.getSchoolClass().getName() : null)
+                                .classId(s.getClassId())
+                                .build());
+                    }
+                }
+            }
+        }
+
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -157,6 +184,8 @@ public class AuthService {
                         .fullName(user.getFullName())
                         .avatarUrl(user.getAvatarUrl())
                         .platformRole(user.getPlatformRole())
+                        .studentId(studentId)
+                        .children(children.isEmpty() ? null : children)
                         .schools(schools)
                         .build())
                 .build();

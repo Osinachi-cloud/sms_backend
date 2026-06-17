@@ -6,6 +6,7 @@ import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
 import com.schoolsaas.model.*;
 import com.schoolsaas.repository.*;
+import com.schoolsaas.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -83,6 +84,7 @@ public class CourseContentService {
                 .description(request.getDescription())
                 .subjectId(request.getSubjectId())
                 .classId(request.getClassId())
+                .targetClassIds(request.getTargetClassIds() != null ? request.getTargetClassIds() : (request.getClassId() != null ? java.util.List.of(request.getClassId()) : java.util.List.of()))
                 .weekNumber(request.getWeekNumber())
                 .contentType(request.getContentType())
                 .fileUrls(request.getFileUrls())
@@ -110,7 +112,12 @@ public class CourseContentService {
         }
         // Non-admins can only edit their own content
         if (!isAdmin && content.getTeacherId() != null) {
-            // Assuming caller already checked permissions; this is a safety net
+            UUID userId = SecurityUtils.getCurrentUserId();
+            Teacher teacher = teacherRepository.findByUserId(userId).orElse(null);
+            UUID teacherId = teacher != null ? teacher.getId() : null;
+            if (teacherId == null || !teacherId.equals(content.getTeacherId())) {
+                throw new com.schoolsaas.exception.BadRequestException("You can only edit content you created");
+            }
         }
 
         if (request.getTitle() != null && !request.getTitle().isBlank()) {
@@ -124,6 +131,9 @@ public class CourseContentService {
         }
         if (request.getClassId() != null) {
             content.setClassId(request.getClassId());
+        }
+        if (request.getTargetClassIds() != null) {
+            content.setTargetClassIds(request.getTargetClassIds());
         }
         if (request.getWeekNumber() != null) {
             content.setWeekNumber(request.getWeekNumber());
@@ -151,11 +161,19 @@ public class CourseContentService {
     }
 
     @Transactional
-    public void deleteContent(UUID schoolId, UUID contentId) {
+    public void deleteContent(UUID schoolId, UUID contentId, boolean isAdmin) {
         CourseContent content = courseContentRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("CourseContent", "id", contentId));
         if (!content.getSchoolId().equals(schoolId)) {
             throw new ResourceNotFoundException("CourseContent", "id", contentId);
+        }
+        if (!isAdmin && content.getTeacherId() != null) {
+            UUID userId = SecurityUtils.getCurrentUserId();
+            Teacher teacher = teacherRepository.findByUserId(userId).orElse(null);
+            UUID teacherId = teacher != null ? teacher.getId() : null;
+            if (teacherId == null || !teacherId.equals(content.getTeacherId())) {
+                throw new com.schoolsaas.exception.BadRequestException("You can only delete content you created");
+            }
         }
         courseContentRepository.delete(content);
     }
@@ -171,9 +189,17 @@ public class CourseContentService {
         if (student == null || !student.getSchoolId().equals(schoolId)) {
             return false;
         }
-        // Content must be for the student's class
-        if (content.getClassId() != null && !content.getClassId().equals(student.getClassId())) {
-            return false;
+        // If targetClassIds is specified, student must be in one of them
+        List<UUID> targets = content.getTargetClassIds();
+        if (targets != null && !targets.isEmpty()) {
+            if (!targets.contains(student.getClassId())) {
+                return false;
+            }
+        } else {
+            // Fallback to legacy classId
+            if (content.getClassId() != null && !content.getClassId().equals(student.getClassId())) {
+                return false;
+            }
         }
         // Student must be enrolled in the subject
         if (content.getSubjectId() != null) {
@@ -216,6 +242,7 @@ public class CourseContentService {
                 .subjectName(subjectName)
                 .classId(content.getClassId())
                 .className(className)
+                .targetClassIds(content.getTargetClassIds())
                 .weekNumber(content.getWeekNumber())
                 .contentType(content.getContentType())
                 .fileUrls(content.getFileUrls())

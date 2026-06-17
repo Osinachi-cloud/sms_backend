@@ -22,6 +22,8 @@ public interface ParentRepository extends JpaRepository<Parent, UUID> {
 
     Optional<Parent> findByUserId(UUID userId);
 
+    Optional<Parent> findByUserIdAndSchoolId(UUID userId, UUID schoolId);
+
     @Modifying
     @Query("UPDATE Parent p SET p.email = :newEmail WHERE p.email = :oldEmail")
     int updateEmailByEmail(String oldEmail, String newEmail);

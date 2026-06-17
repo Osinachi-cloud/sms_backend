@@ -16,6 +16,7 @@ public class QuizDto {
     private String subjectName;
     private UUID classId;
     private String className;
+    private List<UUID> targetClassIds;
     private Integer durationMinutes;
     private BigDecimal totalMarks;
     private BigDecimal passMark;
@@ -26,5 +27,5 @@ public class QuizDto {
     private LocalDateTime endTime;
     private String status;
     private Integer questionCount;
-    private List<QuizQuestionDto> questions;
+    private List<QuizQuestionDto> questions = new java.util.ArrayList<>();
 }

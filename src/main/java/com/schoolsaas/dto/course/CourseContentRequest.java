@@ -11,6 +11,7 @@ public class CourseContentRequest {
     private String description;
     private UUID subjectId;
     private UUID classId;
+    private List<UUID> targetClassIds;
     private Integer weekNumber;
     private String contentType;
     private List<String> fileUrls;

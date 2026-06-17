@@ -41,6 +41,11 @@ public class CourseContent {
     @Column(name = "class_id")
     private UUID classId;
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "target_class_ids", columnDefinition = "jsonb")
+    @Builder.Default
+    private List<UUID> targetClassIds = List.of();
+
     @Column(name = "week_number")
     private Integer weekNumber;
 

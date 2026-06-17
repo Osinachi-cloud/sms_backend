@@ -6,7 +6,9 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Data
 public class CreateTeacherRequest {
@@ -27,4 +29,13 @@ public class CreateTeacherRequest {
     private String password;
 
     private Map<String, Object> metadata;
+
+    // Optional: subject-class assignments to create immediately
+    private List<SubjectClassAssignment> subjectAssignments;
+
+    @Data
+    public static class SubjectClassAssignment {
+        private UUID subjectId;
+        private UUID classId;
+    }
 }

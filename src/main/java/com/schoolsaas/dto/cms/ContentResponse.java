@@ -23,6 +23,7 @@ public class ContentResponse {
     private String folderName;
     private UUID teacherId;
     private String teacherName;
+    private List<java.util.UUID> targetClassIds;
     private String richText;
     private List<String> fileUrls;
     private List<String> videoLinks;
@@ -46,6 +47,7 @@ public class ContentResponse {
                 .folderName(content.getFolder() != null ? content.getFolder().getName() : null)
                 .teacherId(content.getTeacherId())
                 .teacherName(content.getTeacher() != null ? content.getTeacher().getFullName() : null)
+                .targetClassIds(content.getTargetClassIds())
                 .richText(content.getRichText())
                 .fileUrls(content.getFileUrls())
                 .videoLinks(content.getVideoLinks())

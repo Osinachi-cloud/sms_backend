@@ -28,7 +28,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-// @EnableMethodSecurity  // TODO: Re-enable before production
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 

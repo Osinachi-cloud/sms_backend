@@ -21,6 +21,7 @@ public class CourseContentResponse {
     private String subjectName;
     private UUID classId;
     private String className;
+    private List<UUID> targetClassIds;
     private Integer weekNumber;
     private String contentType;
     private List<String> fileUrls;

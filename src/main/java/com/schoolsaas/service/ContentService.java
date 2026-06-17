@@ -6,9 +6,11 @@ import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
 import com.schoolsaas.model.ContentFolder;
 import com.schoolsaas.model.ContentItem;
+import com.schoolsaas.model.Student;
 import com.schoolsaas.model.Teacher;
 import com.schoolsaas.repository.ContentFolderRepository;
 import com.schoolsaas.repository.ContentItemRepository;
+import com.schoolsaas.repository.StudentRepository;
 import com.schoolsaas.repository.TeacherRepository;
 import com.schoolsaas.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ public class ContentService {
     private final ContentItemRepository contentItemRepository;
     private final ContentFolderRepository contentFolderRepository;
     private final TeacherRepository teacherRepository;
+    private final StudentRepository studentRepository;
 
     @Transactional(readOnly = true)
     public List<ContentFolder> getFolders(UUID schoolId) {
@@ -57,33 +60,49 @@ public class ContentService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ContentResponse> getContent(UUID schoolId, String status, Pageable pageable) {
+    public Page<ContentResponse> getContent(UUID schoolId, String status, UUID studentId, Pageable pageable) {
+        Page<ContentItem> page;
         if ("PENDING".equals(status)) {
-            return contentItemRepository.findPendingBySchoolId(schoolId, pageable)
-                    .map(ContentResponse::fromEntity);
+            page = contentItemRepository.findPendingBySchoolId(schoolId, pageable);
+        } else if ("PUBLISHED".equals(status) || "APPROVED".equals(status)) {
+            page = contentItemRepository.findPublishedBySchoolId(schoolId, pageable);
+        } else if (status != null) {
+            page = contentItemRepository.findBySchoolIdAndStatus(schoolId, status, pageable);
+        } else {
+            page = contentItemRepository.findBySchoolId(schoolId, pageable);
         }
-        if ("PUBLISHED".equals(status) || "APPROVED".equals(status)) {
-            return contentItemRepository.findPublishedBySchoolId(schoolId, pageable)
-                    .map(ContentResponse::fromEntity);
-        }
-        if (status != null) {
-            return contentItemRepository.findBySchoolIdAndStatus(schoolId, status, pageable)
-                    .map(ContentResponse::fromEntity);
-        }
-        return contentItemRepository.findBySchoolId(schoolId, pageable)
-                .map(ContentResponse::fromEntity);
+        List<ContentResponse> filtered = page.getContent().stream()
+                .filter(c -> studentId == null || isContentVisibleToStudent(schoolId, c, studentId))
+                .map(ContentResponse::fromEntity)
+                .collect(java.util.stream.Collectors.toList());
+        return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
     }
 
     @Transactional(readOnly = true)
-    public ContentResponse getContentItem(UUID schoolId, UUID contentId) {
+    public ContentResponse getContentItem(UUID schoolId, UUID contentId, UUID studentId) {
         ContentItem content = contentItemRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Content", "id", contentId));
 
         if (!content.getSchoolId().equals(schoolId)) {
             throw new ResourceNotFoundException("Content", "id", contentId);
         }
+        if (studentId != null && !isContentVisibleToStudent(schoolId, content, studentId)) {
+            throw new BadRequestException("You do not have access to this content");
+        }
 
         return ContentResponse.fromEntity(content);
+    }
+
+    private boolean isContentVisibleToStudent(UUID schoolId, ContentItem content, UUID studentId) {
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null || !student.getSchoolId().equals(schoolId)) {
+            return false;
+        }
+        List<UUID> targets = content.getTargetClassIds();
+        if (targets != null && !targets.isEmpty()) {
+            return targets.contains(student.getClassId());
+        }
+        return true;
     }
 
     @Transactional
@@ -100,6 +119,7 @@ public class ContentService {
                 .richText(request.getRichText())
                 .fileUrls(request.getFileUrls())
                 .videoLinks(request.getVideoLinks())
+                .targetClassIds(request.getTargetClassIds() != null ? request.getTargetClassIds() : java.util.List.of())
                 .dueDate(request.getDueDate())
                 .expiresAt(request.getExpiresAt())
                 .status("DRAFT")
@@ -112,12 +132,21 @@ public class ContentService {
     }
 
     @Transactional
-    public ContentResponse updateContent(UUID schoolId, UUID contentId, CreateContentRequest request) {
+    public ContentResponse updateContent(UUID schoolId, UUID contentId, CreateContentRequest request, boolean isAdmin) {
         ContentItem content = contentItemRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Content", "id", contentId));
 
         if (!content.getSchoolId().equals(schoolId)) {
             throw new ResourceNotFoundException("Content", "id", contentId);
+        }
+
+        if (!isAdmin && content.getTeacherId() != null) {
+            UUID userId = SecurityUtils.getCurrentUserId();
+            Teacher teacher = teacherRepository.findByUserId(userId).orElse(null);
+            UUID teacherId = teacher != null ? teacher.getId() : null;
+            if (teacherId == null || !teacherId.equals(content.getTeacherId())) {
+                throw new BadRequestException("You can only edit content you created");
+            }
         }
 
         if (!"DRAFT".equals(content.getStatus()) && !"REJECTED".equals(content.getStatus())) {
@@ -130,6 +159,9 @@ public class ContentService {
         content.setFolderId(request.getFolderId());
         content.setFileUrls(request.getFileUrls());
         content.setVideoLinks(request.getVideoLinks());
+        if (request.getTargetClassIds() != null) {
+            content.setTargetClassIds(request.getTargetClassIds());
+        }
         content.setDueDate(request.getDueDate());
         content.setExpiresAt(request.getExpiresAt());
         if (request.getMetadata() != null) {
@@ -205,12 +237,21 @@ public class ContentService {
     }
 
     @Transactional
-    public void deleteContent(UUID schoolId, UUID contentId) {
+    public void deleteContent(UUID schoolId, UUID contentId, boolean isAdmin) {
         ContentItem content = contentItemRepository.findById(contentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Content", "id", contentId));
 
         if (!content.getSchoolId().equals(schoolId)) {
             throw new ResourceNotFoundException("Content", "id", contentId);
+        }
+
+        if (!isAdmin && content.getTeacherId() != null) {
+            UUID userId = SecurityUtils.getCurrentUserId();
+            Teacher teacher = teacherRepository.findByUserId(userId).orElse(null);
+            UUID teacherId = teacher != null ? teacher.getId() : null;
+            if (teacherId == null || !teacherId.equals(content.getTeacherId())) {
+                throw new BadRequestException("You can only delete content you created");
+            }
         }
 
         content.setStatus("ARCHIVED");

@@ -15,6 +15,7 @@ public class CreateContentRequest {
 
     private String contentType = "NOTE";
     private UUID folderId;
+    private List<UUID> targetClassIds;
     private String richText;
     private List<String> fileUrls;
     private List<String> videoLinks;

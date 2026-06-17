@@ -1,5 +1,6 @@
 package com.schoolsaas.dto.subject;
 
+import com.schoolsaas.model.Subject;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,4 +30,20 @@ public class SubjectResponse {
     private List<String> classNames;
     private Long enrollmentCount;
     private LocalDateTime createdAt;
+
+    public static SubjectResponse fromEntity(Subject subject) {
+        return SubjectResponse.builder()
+                .id(subject.getId())
+                .name(subject.getName())
+                .code(subject.getCode())
+                .description(subject.getDescription())
+                .isActive(subject.getIsActive())
+                .isFree(subject.getIsFree())
+                .cost(subject.getCost())
+                .createdBy(subject.getCreatedBy())
+                .createdByType(subject.getCreatedByType())
+                .classIds(subject.getClassIds())
+                .createdAt(subject.getCreatedAt())
+                .build();
+    }
 }

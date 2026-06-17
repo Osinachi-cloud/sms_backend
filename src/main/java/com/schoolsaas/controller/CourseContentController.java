@@ -100,7 +100,8 @@ public class CourseContentController {
     public ResponseEntity<Void> deleteContent(
             @PathVariable UUID schoolId,
             @PathVariable UUID contentId) {
-        courseContentService.deleteContent(schoolId, contentId);
+        boolean isAdmin = SecurityUtils.isAppAdmin() || SecurityUtils.isGeneralAdmin() || SecurityUtils.hasPermission("cms.content.delete.any");
+        courseContentService.deleteContent(schoolId, contentId, isAdmin);
         return ResponseEntity.ok().build();
     }
 }

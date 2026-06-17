@@ -1,0 +1,38 @@
+#name: Keep Render Backend Alive
+#
+#on:
+#  schedule:
+#    # Run every 14 minutes
+#    - cron: '*/14 * * * *'
+#  workflow_dispatch:
+#
+#jobs:
+#  ping:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Ping Health Endpoint
+#        run: |
+#          echo "Pinging Render backend to prevent free-tier sleep..."
+#          curl -s -o /dev/null -w "%{http_code}" \
+#            https://sms-backend-joed.onrender.com/api/health || true
+#          echo "Ping complete."
+
+name: Keep Render Backend Alive (Work Hours Only)
+
+on:
+  schedule:
+    # Run every 13 minutes from 8 AM to 10 PM (your timezone)
+    # Adjust the hours based on when your team tests
+    - cron: '*/13 8-22 * * *'  # 8 AM - 10 PM
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Health Endpoint
+        run: |
+          echo "Pinging Render backend..."
+          curl -s -o /dev/null -w "%{http_code}" \
+            https://sms-backend-joed.onrender.com/api/health || true
+          echo "Ping complete."

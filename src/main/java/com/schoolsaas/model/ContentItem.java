@@ -34,6 +34,11 @@ public class ContentItem {
     @Column(name = "teacher_id")
     private UUID teacherId;
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "target_class_ids", columnDefinition = "jsonb")
+    @Builder.Default
+    private List<UUID> targetClassIds = List.of();
+
     @Column(nullable = false)
     private String title;
 

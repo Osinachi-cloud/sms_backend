@@ -29,7 +29,20 @@ public class AuthResponse {
         private String fullName;
         private String avatarUrl;
         private String platformRole;
+        private UUID studentId;
+        private List<ChildInfo> children;
         private List<SchoolInfo> schools;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ChildInfo {
+        private UUID id;
+        private String fullName;
+        private String className;
+        private UUID classId;
     }
 
     @Data

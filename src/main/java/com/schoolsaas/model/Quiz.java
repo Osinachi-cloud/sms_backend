@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -36,6 +37,11 @@ public class Quiz {
 
     @Column(name = "class_id")
     private UUID classId;
+
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "target_class_ids", columnDefinition = "jsonb")
+    @Builder.Default
+    private List<UUID> targetClassIds = List.of();
 
     @Column(name = "created_by")
     private UUID createdBy;

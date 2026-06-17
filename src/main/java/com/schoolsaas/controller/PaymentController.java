@@ -3,6 +3,11 @@ package com.schoolsaas.controller;
 import com.schoolsaas.dto.payment.InitiatePaymentRequest;
 import com.schoolsaas.dto.payment.PaymentResponse;
 import com.schoolsaas.dto.payment.RecordPaymentRequest;
+import com.schoolsaas.model.Parent;
+import com.schoolsaas.model.ParentStudent;
+import com.schoolsaas.repository.ParentRepository;
+import com.schoolsaas.repository.ParentStudentRepository;
+import com.schoolsaas.security.SecurityUtils;
 import com.schoolsaas.service.PaymentGatewayService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +17,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/schools/{schoolId}/payments")
@@ -20,6 +27,8 @@ import java.util.UUID;
 public class PaymentController {
 
     private final PaymentGatewayService paymentGatewayService;
+    private final ParentRepository parentRepository;
+    private final ParentStudentRepository parentStudentRepository;
 
     @GetMapping
     @PreAuthorize("hasPermission(#schoolId, 'payment.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
@@ -60,6 +69,27 @@ public class PaymentController {
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId,
             Pageable pageable) {
+        return ResponseEntity.ok(paymentGatewayService.getStudentPayments(studentId, pageable));
+    }
+
+    @GetMapping("/parent-view/{studentId}")
+    @PreAuthorize("hasPermission(#schoolId, 'student.grades.read')")
+    public ResponseEntity<Page<PaymentResponse>> getParentViewOfStudentPayments(
+            @PathVariable UUID schoolId,
+            @PathVariable UUID studentId,
+            Pageable pageable) {
+        UUID userId = SecurityUtils.getCurrentUserId();
+        var parentOpt = parentRepository.findByUserIdAndSchoolId(userId, schoolId);
+        if (parentOpt.isEmpty()) {
+            return ResponseEntity.ok(Page.empty());
+        }
+        Parent parent = parentOpt.get();
+        List<UUID> childIds = parentStudentRepository.findByParentId(parent.getId()).stream()
+                .map(ParentStudent::getStudentId)
+                .collect(Collectors.toList());
+        if (!childIds.contains(studentId)) {
+            return ResponseEntity.status(403).build();
+        }
         return ResponseEntity.ok(paymentGatewayService.getStudentPayments(studentId, pageable));
     }
 }

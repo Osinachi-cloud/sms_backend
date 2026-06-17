@@ -47,7 +47,7 @@ public class SubjectController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(#schoolId, 'subject.create') or hasPermission(#schoolId, 'class.update') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("hasPermission(#schoolId, 'subject.create') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
     public ResponseEntity<SubjectResponse> createSubject(@PathVariable UUID schoolId, @Valid @RequestBody SubjectRequest request) {
         UUID createdBy = SecurityUtils.getCurrentUserId();
         boolean isAdmin = SecurityUtils.isAppAdmin() || SecurityUtils.isGeneralAdmin() || SecurityUtils.hasPermission("subject.update");

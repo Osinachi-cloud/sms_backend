@@ -4,14 +4,8 @@ import com.schoolsaas.dto.teacher.CreateTeacherRequest;
 import com.schoolsaas.dto.teacher.TeacherResponse;
 import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
-import com.schoolsaas.model.Role;
-import com.schoolsaas.model.Teacher;
-import com.schoolsaas.model.User;
-import com.schoolsaas.model.UserSchool;
-import com.schoolsaas.repository.RoleRepository;
-import com.schoolsaas.repository.TeacherRepository;
-import com.schoolsaas.repository.UserRepository;
-import com.schoolsaas.repository.UserSchoolRepository;
+import com.schoolsaas.model.*;
+import com.schoolsaas.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -32,6 +26,7 @@ public class TeacherService {
     private final UserRepository userRepository;
     private final UserSchoolRepository userSchoolRepository;
     private final RoleRepository roleRepository;
+    private final TeacherClassRepository teacherClassRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
@@ -120,6 +115,21 @@ public class TeacherService {
                 log.info("User account created for teacher: {} in school {} with password [{}]",
                         user.getId(), schoolId,
                         (request.getPassword() != null && !request.getPassword().isBlank()) ? "provided" : "default");
+            }
+        }
+
+        // Create subject-class assignments if provided
+        if (request.getSubjectAssignments() != null && !request.getSubjectAssignments().isEmpty()) {
+            for (CreateTeacherRequest.SubjectClassAssignment sca : request.getSubjectAssignments()) {
+                if (sca.getSubjectId() != null && sca.getClassId() != null) {
+                    TeacherClass tc = TeacherClass.builder()
+                            .teacherId(teacher.getId())
+                            .classId(sca.getClassId())
+                            .subjectId(sca.getSubjectId())
+                            .isClassTeacher(false)
+                            .build();
+                    teacherClassRepository.save(tc);
+                }
             }
         }
 

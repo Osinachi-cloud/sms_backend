@@ -3,6 +3,7 @@ package com.schoolsaas.controller;
 import com.schoolsaas.dto.cms.ContentResponse;
 import com.schoolsaas.dto.cms.CreateContentRequest;
 import com.schoolsaas.model.ContentFolder;
+import com.schoolsaas.security.SecurityUtils;
 import com.schoolsaas.service.ContentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -49,8 +50,9 @@ public class ContentController {
     public ResponseEntity<Page<ContentResponse>> getContent(
             @PathVariable UUID schoolId,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID studentId,
             Pageable pageable) {
-        return ResponseEntity.ok(contentService.getContent(schoolId, status, pageable));
+        return ResponseEntity.ok(contentService.getContent(schoolId, status, studentId, pageable));
     }
 
     @GetMapping("/content/pending")
@@ -58,15 +60,16 @@ public class ContentController {
     public ResponseEntity<Page<ContentResponse>> getPendingContent(
             @PathVariable UUID schoolId,
             Pageable pageable) {
-        return ResponseEntity.ok(contentService.getContent(schoolId, "PENDING", pageable));
+        return ResponseEntity.ok(contentService.getContent(schoolId, "PENDING", null, pageable));
     }
 
     @GetMapping("/content/{contentId}")
     @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
     public ResponseEntity<ContentResponse> getContentItem(
             @PathVariable UUID schoolId,
-            @PathVariable UUID contentId) {
-        return ResponseEntity.ok(contentService.getContentItem(schoolId, contentId));
+            @PathVariable UUID contentId,
+            @RequestParam(required = false) UUID studentId) {
+        return ResponseEntity.ok(contentService.getContentItem(schoolId, contentId, studentId));
     }
 
     @PostMapping("/content")
@@ -83,7 +86,8 @@ public class ContentController {
             @PathVariable UUID schoolId,
             @PathVariable UUID contentId,
             @Valid @RequestBody CreateContentRequest request) {
-        return ResponseEntity.ok(contentService.updateContent(schoolId, contentId, request));
+        boolean isAdmin = SecurityUtils.isAppAdmin() || SecurityUtils.isGeneralAdmin() || SecurityUtils.hasPermission("cms.content.edit.any");
+        return ResponseEntity.ok(contentService.updateContent(schoolId, contentId, request, isAdmin));
     }
 
     @PutMapping("/content/{contentId}/submit")
@@ -116,7 +120,8 @@ public class ContentController {
     public ResponseEntity<Void> deleteContent(
             @PathVariable UUID schoolId,
             @PathVariable UUID contentId) {
-        contentService.deleteContent(schoolId, contentId);
+        boolean isAdmin = SecurityUtils.isAppAdmin() || SecurityUtils.isGeneralAdmin() || SecurityUtils.hasPermission("cms.content.delete.any");
+        contentService.deleteContent(schoolId, contentId, isAdmin);
         return ResponseEntity.ok().build();
     }
 }
