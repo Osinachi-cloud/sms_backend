@@ -33,7 +33,7 @@ public class AttendanceController {
     // ===========================
 
     @GetMapping("/class/{classId}")
-    @PreAuthorize("hasPermission(#schoolId, 'student.attendance.read') or hasPermission(#schoolId, 'student.attendance.manage') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ClassAttendanceDto>> getClassAttendanceForDate(
             @PathVariable UUID schoolId,
             @PathVariable UUID classId,
@@ -42,7 +42,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/class/{classId}/report")
-    @PreAuthorize("hasPermission(#schoolId, 'student.attendance.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AttendanceReportDto> getClassAttendanceReport(
             @PathVariable UUID schoolId,
             @PathVariable UUID classId,
@@ -79,7 +79,7 @@ public class AttendanceController {
     // ===========================
 
     @GetMapping("/students/{studentId}")
-    @PreAuthorize("hasPermission(#schoolId, 'student.attendance.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<AttendanceResponse>> getStudentAttendance(
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId,
@@ -89,7 +89,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/students/{studentId}/summary")
-    @PreAuthorize("hasPermission(#schoolId, 'student.attendance.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AttendanceSummary> getStudentAttendanceSummary(
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId) {
@@ -101,7 +101,7 @@ public class AttendanceController {
     // ===========================
 
     @GetMapping("/parents/{parentId}/children")
-    @PreAuthorize("hasPermission(#schoolId, 'student.attendance.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<AttendanceResponse>> getChildrenAttendance(
             @PathVariable UUID schoolId,
             @PathVariable UUID parentId) {

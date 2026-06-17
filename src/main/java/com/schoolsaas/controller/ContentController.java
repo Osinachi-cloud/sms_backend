@@ -26,7 +26,7 @@ public class ContentController {
     private final ContentService contentService;
 
     @GetMapping("/folders")
-    @PreAuthorize("hasPermission(#schoolId, 'cms.folder.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<ContentFolder>> getFolders(@PathVariable UUID schoolId, Pageable pageable) {
         List<ContentFolder> list = contentService.getRootFolders(schoolId);
         return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
@@ -46,7 +46,7 @@ public class ContentController {
     }
 
     @GetMapping("/content")
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<ContentResponse>> getContent(
             @PathVariable UUID schoolId,
             @RequestParam(required = false) String status,
@@ -64,7 +64,7 @@ public class ContentController {
     }
 
     @GetMapping("/content/{contentId}")
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ContentResponse> getContentItem(
             @PathVariable UUID schoolId,
             @PathVariable UUID contentId,

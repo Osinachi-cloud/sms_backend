@@ -21,7 +21,7 @@ public class TemporaryPermissionController {
     private final TemporaryPermissionService temporaryPermissionService;
 
     @GetMapping("/users/{userId}")
-    @PreAuthorize("hasRole('APP_ADMIN')")
+    @PreAuthorize("hasRole('APP_ADMIN') or #userId == authentication.principal.id")
     public ResponseEntity<List<TemporaryUserPermission>> getUserTemporaryPermissions(
             @PathVariable UUID schoolId,
             @PathVariable UUID userId) {

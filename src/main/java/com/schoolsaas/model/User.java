@@ -59,6 +59,6 @@ public class User {
     private LocalDateTime updatedAt;
 
     public boolean isPlatformAdmin() {
-        return Boolean.TRUE.equals(isPlatformAdmin) || platformRole != null;
+        return Boolean.TRUE.equals(isPlatformAdmin) || "APP_ADMIN".equals(platformRole) || "GENERAL_ADMIN".equals(platformRole);
     }
 }

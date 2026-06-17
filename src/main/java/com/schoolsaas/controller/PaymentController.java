@@ -31,7 +31,7 @@ public class PaymentController {
     private final ParentStudentRepository parentStudentRepository;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'payment.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<PaymentResponse>> getPayments(
             @PathVariable UUID schoolId,
             @RequestParam(required = false) String status,
@@ -56,7 +56,7 @@ public class PaymentController {
     }
 
     @GetMapping("/verify/{reference}")
-    @PreAuthorize("hasPermission(#schoolId, 'payment.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PaymentResponse> verifyPayment(
             @PathVariable UUID schoolId,
             @PathVariable String reference) {
@@ -64,7 +64,7 @@ public class PaymentController {
     }
 
     @GetMapping("/student/{studentId}")
-    @PreAuthorize("hasPermission(#schoolId, 'payment.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<PaymentResponse>> getStudentPayments(
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId,
@@ -73,7 +73,7 @@ public class PaymentController {
     }
 
     @GetMapping("/parent-view/{studentId}")
-    @PreAuthorize("hasPermission(#schoolId, 'student.grades.read')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<PaymentResponse>> getParentViewOfStudentPayments(
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId,

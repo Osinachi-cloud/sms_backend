@@ -21,7 +21,7 @@ public class TeacherController {
     private final TeacherService teacherService;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'teacher.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<TeacherResponse>> getTeachers(
             @PathVariable UUID schoolId,
             @RequestParam(required = false) String status,
@@ -31,7 +31,7 @@ public class TeacherController {
     }
 
     @GetMapping("/{teacherId}")
-    @PreAuthorize("hasPermission(#schoolId, 'teacher.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TeacherResponse> getTeacher(
             @PathVariable UUID schoolId,
             @PathVariable UUID teacherId) {

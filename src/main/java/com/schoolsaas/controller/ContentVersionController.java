@@ -28,7 +28,7 @@ public class ContentVersionController {
     public record ScheduleRequest(LocalDateTime publishAt) {}
 
     @PostMapping
-    @PreAuthorize("hasPermission(#contentId, 'Content', 'CMS_EDIT')")
+    @PreAuthorize("hasPermission(#contentId, 'Content', 'cms.content.edit')")
     public ResponseEntity<ContentVersion> createVersion(
             @PathVariable UUID contentId,
             @Valid @RequestBody CreateVersionRequest request,
@@ -42,7 +42,7 @@ public class ContentVersionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasPermission(#contentId, 'Content', 'CMS_VIEW')")
+    @PreAuthorize("hasPermission(#contentId, 'Content', 'cms.content.read')")
     public ResponseEntity<Page<ContentVersion>> getVersionHistory(
             @PathVariable UUID contentId,
             Pageable pageable) {
@@ -50,7 +50,7 @@ public class ContentVersionController {
     }
 
     @GetMapping("/{versionNumber}")
-    @PreAuthorize("hasPermission(#contentId, 'Content', 'CMS_VIEW')")
+    @PreAuthorize("hasPermission(#contentId, 'Content', 'cms.content.read')")
     public ResponseEntity<ContentVersion> getVersion(
             @PathVariable UUID contentId,
             @PathVariable Integer versionNumber) {
@@ -58,7 +58,7 @@ public class ContentVersionController {
     }
 
     @PostMapping("/{versionNumber}/restore")
-    @PreAuthorize("hasPermission(#contentId, 'Content', 'CMS_EDIT')")
+    @PreAuthorize("hasPermission(#contentId, 'Content', 'cms.content.edit')")
     public ResponseEntity<ContentItem> restoreVersion(
             @PathVariable UUID contentId,
             @PathVariable Integer versionNumber,
@@ -72,7 +72,7 @@ public class ContentVersionController {
     }
 
     @PostMapping("/schedule")
-    @PreAuthorize("hasPermission(#contentId, 'Content', 'CMS_PUBLISH')")
+    @PreAuthorize("hasPermission(#contentId, 'Content', 'cms.content.publish')")
     public ResponseEntity<ContentItem> schedulePublish(
             @PathVariable UUID contentId,
             @Valid @RequestBody ScheduleRequest request,
@@ -86,7 +86,7 @@ public class ContentVersionController {
     }
 
     @DeleteMapping("/schedule")
-    @PreAuthorize("hasPermission(#contentId, 'Content', 'CMS_PUBLISH')")
+    @PreAuthorize("hasPermission(#contentId, 'Content', 'cms.content.publish')")
     public ResponseEntity<ContentItem> cancelSchedule(
             @PathVariable UUID contentId,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
@@ -95,7 +95,7 @@ public class ContentVersionController {
     }
 
     @PostMapping("/featured")
-    @PreAuthorize("hasPermission(#contentId, 'Content', 'CMS_PUBLISH')")
+    @PreAuthorize("hasPermission(#contentId, 'Content', 'cms.content.publish')")
     public ResponseEntity<ContentItem> toggleFeatured(
             @PathVariable UUID contentId,
             @RequestParam boolean featured,

@@ -33,7 +33,7 @@ public class GradeController {
     private final StudentRepository studentRepository;
 
     @GetMapping("/students/{studentId}/grades")
-    @PreAuthorize("hasPermission(#schoolId, 'student.grades.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<GradeResponse>> getStudentGrades(
             @PathVariable UUID schoolId,
             @PathVariable String studentId) {
@@ -90,7 +90,7 @@ public class GradeController {
     }
 
     @GetMapping("/students/{studentId}/grades/term/{termId}")
-    @PreAuthorize("hasPermission(#schoolId, 'student.grades.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<GradeResponse>> getStudentGradesByTerm(
             @PathVariable UUID schoolId,
             @PathVariable String studentId,

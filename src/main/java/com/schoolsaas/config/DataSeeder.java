@@ -332,10 +332,12 @@ public class DataSeeder implements CommandLineRunner {
                 "teacher.read", "teacher.create", "teacher.update", "teacher.delete", "teacher.assign.class",
                 "class.read", "class.create", "class.update", "class.delete",
                 "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.approve", "cms.content.publish",
+                "cms.content.delete",
                 "fee.read", "fee.create", "fee.update", "payment.read", "payment.create",
                 "analytics.academic.view", "analytics.finance.view", "school.read", "school.update",
                 "role.read", "role.create", "role.delete",
-                "user.read", "user.create"
+                "user.read", "user.create", "user.delete",
+                "timetable.read", "timetable.create", "timetable.update", "timetable.delete"
         );
         assignPermissions(roleId, adminKeys);
     }
@@ -345,7 +347,8 @@ public class DataSeeder implements CommandLineRunner {
                 "student.read", "student.grades.read", "student.grades.manage",
                 "student.attendance.read", "student.attendance.manage",
                 "class.read", "cms.folder.read", "cms.content.read", "cms.content.create",
-                "cms.content.edit", "cms.content.submit", "subject.read"
+                "cms.content.edit", "cms.content.submit", "subject.read",
+                "timetable.read", "timetable.create"
         );
         assignPermissions(roleId, teacherKeys);
     }
@@ -353,7 +356,8 @@ public class DataSeeder implements CommandLineRunner {
     private void assignStudentPermissions(UUID roleId) {
         List<String> studentKeys = List.of(
                 "student.grades.read", "student.attendance.read",
-                "cms.content.read", "fee.read", "payment.read"
+                "cms.content.read", "fee.read", "payment.read",
+                "timetable.read"
         );
         assignPermissions(roleId, studentKeys);
     }

@@ -24,14 +24,14 @@ public class SubjectController {
     private final SubjectService subjectService;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'subject.read') or hasPermission(#schoolId, 'class.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<SubjectResponse>> getSubjects(@PathVariable UUID schoolId, Pageable pageable) {
         List<SubjectResponse> list = subjectService.getSubjects(schoolId);
         return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 
     @GetMapping("/student/{studentId}")
-    @PreAuthorize("hasPermission(#schoolId, 'subject.read') or hasPermission(#schoolId, 'student.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<SubjectResponse>> getSubjectsForStudent(
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId,
@@ -41,7 +41,7 @@ public class SubjectController {
     }
 
     @GetMapping("/{subjectId}")
-    @PreAuthorize("hasPermission(#schoolId, 'subject.read') or hasPermission(#schoolId, 'class.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SubjectResponse> getSubject(@PathVariable UUID schoolId, @PathVariable UUID subjectId) {
         return ResponseEntity.ok(subjectService.getSubject(schoolId, subjectId));
     }

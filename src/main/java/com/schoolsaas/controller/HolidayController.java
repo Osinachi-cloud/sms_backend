@@ -30,7 +30,7 @@ public class HolidayController {
     private final HolidayBulkUploadService holidayBulkUploadService;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'school.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<Holiday>> getHolidays(@PathVariable UUID schoolId, Pageable pageable) {
         return ResponseEntity.ok(holidayRepository.findBySchoolId(schoolId, pageable));
     }

@@ -22,14 +22,14 @@ public class TeacherSubjectAssignmentController {
     private final TeacherSubjectAssignmentService assignmentService;
 
     @GetMapping("/classes/{classId}")
-    @PreAuthorize("hasPermission(#schoolId, 'class.read') or hasPermission(#schoolId, 'teacher.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<TeacherSubjectAssignmentDto>> getAssignmentsByClass(@PathVariable UUID schoolId, @PathVariable UUID classId, Pageable pageable) {
         List<TeacherSubjectAssignmentDto> list = assignmentService.getAssignmentsByClass(schoolId, classId);
         return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 
     @GetMapping("/teachers/{teacherId}")
-    @PreAuthorize("hasPermission(#schoolId, 'teacher.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<TeacherSubjectAssignmentDto>> getAssignmentsByTeacher(@PathVariable UUID schoolId, @PathVariable UUID teacherId, Pageable pageable) {
         List<TeacherSubjectAssignmentDto> list = assignmentService.getAssignmentsByTeacher(schoolId, teacherId);
         return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));

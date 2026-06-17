@@ -25,7 +25,7 @@ public class BulkEnrollmentController {
     private final BulkEnrollmentService bulkEnrollmentService;
 
     @PostMapping("/preview")
-    @PreAuthorize("hasPermission(#schoolId, 'School', 'STUDENT_CREATE')")
+    @PreAuthorize("hasPermission(#schoolId, 'student.create')")
     public ResponseEntity<BulkEnrollmentService.PreviewResult> previewFile(
             @PathVariable UUID schoolId,
             @RequestParam("file") MultipartFile file) throws IOException {
@@ -33,13 +33,13 @@ public class BulkEnrollmentController {
     }
 
     @GetMapping("/fields")
-    @PreAuthorize("hasPermission(#schoolId, 'School', 'STUDENT_CREATE')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Map<String, Object>>> getAvailableFields(@PathVariable UUID schoolId) {
         return ResponseEntity.ok(bulkEnrollmentService.getAvailableFields());
     }
 
     @PostMapping("/process")
-    @PreAuthorize("hasPermission(#schoolId, 'School', 'STUDENT_CREATE')")
+    @PreAuthorize("hasPermission(#schoolId, 'student.create')")
     public ResponseEntity<Map<String, Object>> processFile(
             @PathVariable UUID schoolId,
             @RequestParam("file") MultipartFile file,
@@ -70,7 +70,7 @@ public class BulkEnrollmentController {
     }
 
     @GetMapping("/jobs")
-    @PreAuthorize("hasPermission(#schoolId, 'School', 'STUDENT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<BulkEnrollmentJob>> getJobs(
             @PathVariable UUID schoolId,
             Pageable pageable) {
@@ -78,7 +78,7 @@ public class BulkEnrollmentController {
     }
 
     @GetMapping("/jobs/{jobId}")
-    @PreAuthorize("hasPermission(#schoolId, 'School', 'STUDENT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BulkEnrollmentJob> getJob(
             @PathVariable UUID schoolId,
             @PathVariable UUID jobId) {

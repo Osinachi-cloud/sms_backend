@@ -30,7 +30,7 @@ public class TeacherStudentController {
     private final TeacherRepository teacherRepository;
 
     @GetMapping("/teachers/{teacherId}")
-    @PreAuthorize("hasPermission(#schoolId, 'student.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<StudentResponse>> getTeacherStudents(
             @PathVariable UUID schoolId,
             @PathVariable UUID teacherId,
@@ -42,7 +42,7 @@ public class TeacherStudentController {
     }
 
     @GetMapping("/me")
-    @PreAuthorize("hasPermission(#schoolId, 'student.read')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<StudentResponse>> getMyStudents(
             @PathVariable UUID schoolId,
             @RequestParam(required = false) UUID classId,
@@ -58,7 +58,7 @@ public class TeacherStudentController {
     }
 
     @GetMapping("/me/with-parents")
-    @PreAuthorize("hasPermission(#schoolId, 'student.read')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<StudentWithParentsResponse>> getMyStudentsWithParents(
             @PathVariable UUID schoolId,
             @RequestParam(required = false) UUID classId,
@@ -75,7 +75,7 @@ public class TeacherStudentController {
     }
 
     @GetMapping("/teachers/{teacherId}/with-parents")
-    @PreAuthorize("hasPermission(#schoolId, 'student.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<StudentWithParentsResponse>> getTeacherStudentsWithParents(
             @PathVariable UUID schoolId,
             @PathVariable UUID teacherId,
@@ -87,7 +87,7 @@ public class TeacherStudentController {
     }
 
     @GetMapping("/students/{studentId}/parents")
-    @PreAuthorize("hasPermission(#schoolId, 'student.read')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<ParentDto>> getStudentParents(
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId,

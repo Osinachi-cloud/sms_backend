@@ -23,7 +23,7 @@ public class PromotionController {
     private final PromotionService promotionService;
 
     @GetMapping("/classes/{classId}")
-    @PreAuthorize("hasPermission(#schoolId, 'teacher.read') or hasPermission(#schoolId, 'class.read')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<PromotionDto.StudentPromotionInfo>> getEligibleStudents(
             @PathVariable UUID schoolId,
             @PathVariable UUID classId,

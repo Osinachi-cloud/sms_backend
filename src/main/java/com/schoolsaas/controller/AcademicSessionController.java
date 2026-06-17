@@ -20,13 +20,13 @@ public class AcademicSessionController {
     private final AcademicSessionRepository sessionRepository;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'school.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<AcademicSession>> getSessions(@PathVariable UUID schoolId, Pageable pageable) {
         return ResponseEntity.ok(sessionRepository.findBySchoolId(schoolId, pageable));
     }
 
     @GetMapping("/current")
-    @PreAuthorize("hasPermission(#schoolId, 'school.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AcademicSession> getCurrentSession(@PathVariable UUID schoolId) {
         return ResponseEntity.ok(
                 sessionRepository.findBySchoolIdAndIsCurrentTrue(schoolId).orElse(null)

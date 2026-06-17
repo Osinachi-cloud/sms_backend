@@ -20,13 +20,13 @@ public class TermController {
     private final TermRepository termRepository;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'school.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<Term>> getTerms(@PathVariable UUID schoolId, Pageable pageable) {
         return ResponseEntity.ok(termRepository.findBySchoolIdOrderByStartDateDesc(schoolId, pageable));
     }
 
     @GetMapping("/current")
-    @PreAuthorize("hasPermission(#schoolId, 'school.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Term> getCurrentTerm(@PathVariable UUID schoolId) {
         return ResponseEntity.ok(
                 termRepository.findBySchoolIdAndIsCurrentTrue(schoolId).orElse(null)
@@ -34,7 +34,7 @@ public class TermController {
     }
 
     @GetMapping("/session/{sessionId}")
-    @PreAuthorize("hasPermission(#schoolId, 'school.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<Term>> getTermsBySession(@PathVariable UUID schoolId, @PathVariable UUID sessionId, Pageable pageable) {
         return ResponseEntity.ok(termRepository.findBySessionId(sessionId, pageable));
     }

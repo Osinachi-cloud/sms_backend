@@ -21,7 +21,7 @@ public class SchoolSettingsController {
     private final SchoolRepository schoolRepository;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'school.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> getSettings(@PathVariable UUID schoolId) {
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School", "id", schoolId));

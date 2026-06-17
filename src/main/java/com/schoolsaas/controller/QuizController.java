@@ -28,7 +28,7 @@ public class QuizController {
     }
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<QuizDto>> listQuizzes(
             @PathVariable UUID schoolId,
             @RequestParam(required = false) UUID studentId,
@@ -37,7 +37,7 @@ public class QuizController {
     }
 
     @GetMapping("/{quizId}")
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<QuizDto> getQuiz(
             @PathVariable UUID schoolId,
             @PathVariable UUID quizId,

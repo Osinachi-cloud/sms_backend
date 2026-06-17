@@ -21,7 +21,7 @@ public class ClassController {
     private final ClassService classService;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'class.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<ClassResponse>> getClasses(
             @PathVariable UUID schoolId,
             @RequestParam(required = false) String search,
@@ -30,7 +30,7 @@ public class ClassController {
     }
 
     @GetMapping("/{classId}")
-    @PreAuthorize("hasPermission(#schoolId, 'class.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ClassResponse> getClass(
             @PathVariable UUID schoolId,
             @PathVariable UUID classId) {

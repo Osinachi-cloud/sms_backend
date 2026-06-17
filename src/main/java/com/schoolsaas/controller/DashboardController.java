@@ -27,13 +27,13 @@ public class DashboardController {
     private final TeacherRepository teacherRepository;
 
     @GetMapping("/stats")
-    @PreAuthorize("hasPermission(#schoolId, 'analytics.academic.view') or hasPermission(#schoolId, 'school.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<DashboardStats> getSchoolStats(@PathVariable UUID schoolId) {
         return ResponseEntity.ok(dashboardService.getSchoolDashboardStats(schoolId));
     }
 
     @GetMapping("/student")
-    @PreAuthorize("hasPermission(#schoolId, 'student.grades.read')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<StudentDashboard> getStudentDashboard(@PathVariable UUID schoolId) {
         UUID userId = SecurityUtils.getCurrentUserId();
         Optional<Student> student = studentRepository.findByUserId(userId);
@@ -46,7 +46,7 @@ public class DashboardController {
     }
 
     @GetMapping("/student/{studentId}")
-    @PreAuthorize("hasPermission(#schoolId, 'student.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<StudentDashboard> getStudentDashboardById(
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId) {
@@ -54,7 +54,7 @@ public class DashboardController {
     }
 
     @GetMapping("/teacher")
-    @PreAuthorize("hasPermission(#schoolId, 'teacher.read') or hasPermission(#schoolId, 'class.read')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TeacherDashboard> getTeacherDashboard(@PathVariable UUID schoolId) {
         UUID userId = SecurityUtils.getCurrentUserId();
         Optional<Teacher> teacher = teacherRepository.findByUserId(userId);
@@ -67,7 +67,7 @@ public class DashboardController {
     }
 
     @GetMapping("/teacher/{teacherId}")
-    @PreAuthorize("hasPermission(#schoolId, 'teacher.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TeacherDashboard> getTeacherDashboardById(
             @PathVariable UUID schoolId,
             @PathVariable UUID teacherId) {

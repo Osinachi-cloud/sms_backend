@@ -29,7 +29,7 @@ public class DeletionRequestController {
     public record DecisionRequest(@NotBlank String notes, boolean approve) {}
 
     @PostMapping("/schools/{schoolId}/deletion-request")
-    @PreAuthorize("hasPermission(#schoolId, 'School', 'SCHOOL_DELETE')")
+    @PreAuthorize("hasPermission(#schoolId, 'school.deletion.request')")
     public ResponseEntity<DeletionRequest> createRequest(
             @PathVariable UUID schoolId,
             @Valid @RequestBody CreateDeletionRequest request,
@@ -43,7 +43,7 @@ public class DeletionRequestController {
     }
 
     @GetMapping("/schools/{schoolId}/deletion-requests")
-    @PreAuthorize("hasPermission(#schoolId, 'School', 'SCHOOL_VIEW')")
+    @PreAuthorize("hasPermission(#schoolId, 'school.read')")
     public ResponseEntity<Page<DeletionRequest>> getSchoolRequests(
             @PathVariable UUID schoolId,
             Pageable pageable) {

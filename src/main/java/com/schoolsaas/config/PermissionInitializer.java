@@ -97,6 +97,12 @@ public class PermissionInitializer {
                 // User Management
                 Permission.builder().key("user.read").category("USER").description("View school users").build(),
                 Permission.builder().key("user.create").category("USER").description("Create school users").build(),
+                Permission.builder().key("user.delete").category("USER").description("Delete school users").build(),
+                // Timetable
+                Permission.builder().key("timetable.read").category("TIMETABLE").description("View timetable").build(),
+                Permission.builder().key("timetable.create").category("TIMETABLE").description("Create timetable entries").build(),
+                Permission.builder().key("timetable.update").category("TIMETABLE").description("Update timetable entries").build(),
+                Permission.builder().key("timetable.delete").category("TIMETABLE").description("Delete timetable entries").build(),
                 // Academic
                 Permission.builder().key("session.read").category("ACADEMIC").description("View academic sessions").build(),
                 Permission.builder().key("session.create").category("ACADEMIC").description("Create academic sessions").build(),

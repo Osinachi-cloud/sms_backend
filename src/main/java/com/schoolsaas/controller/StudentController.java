@@ -38,7 +38,7 @@ public class StudentController {
     private final StudentRepository studentRepository;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'student.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<StudentResponse>> getStudents(
             @PathVariable UUID schoolId,
             @RequestParam(required = false) String status,
@@ -49,7 +49,7 @@ public class StudentController {
     }
 
     @GetMapping("/{studentId}")
-    @PreAuthorize("hasPermission(#schoolId, 'student.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<StudentDetailResponse> getStudent(
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId) {

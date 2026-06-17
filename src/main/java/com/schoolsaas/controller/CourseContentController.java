@@ -27,14 +27,14 @@ public class CourseContentController {
     private final TeacherRepository teacherRepository;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<CourseContentResponse>> getAllContents(@PathVariable UUID schoolId, Pageable pageable) {
         List<CourseContentResponse> list = courseContentService.getAllContents(schoolId);
         return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
 
     @GetMapping("/subject/{subjectId}")
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<CourseContentResponse>> getContentsBySubject(
             @PathVariable UUID schoolId,
             @PathVariable UUID subjectId,
@@ -45,7 +45,7 @@ public class CourseContentController {
     }
 
     @GetMapping("/class/{classId}")
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<CourseContentResponse>> getContentsByClass(
             @PathVariable UUID schoolId,
             @PathVariable UUID classId,
@@ -56,7 +56,7 @@ public class CourseContentController {
     }
 
     @GetMapping("/teacher/{teacherId}")
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<CourseContentResponse>> getContentsByTeacher(
             @PathVariable UUID schoolId,
             @PathVariable UUID teacherId,
@@ -66,7 +66,7 @@ public class CourseContentController {
     }
 
     @GetMapping("/{contentId}")
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.read') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CourseContentResponse> getContent(
             @PathVariable UUID schoolId,
             @PathVariable UUID contentId,
