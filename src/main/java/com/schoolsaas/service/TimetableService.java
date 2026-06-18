@@ -2,10 +2,11 @@ package com.schoolsaas.service;
 
 import com.schoolsaas.dto.timetable.TimetableEntryDto;
 import com.schoolsaas.dto.timetable.TimetablePeriodDto;
+import com.schoolsaas.exception.BadRequestException;
+import com.schoolsaas.exception.ResourceNotFoundException;
 import com.schoolsaas.model.TimetableEntry;
 import com.schoolsaas.model.TimetablePeriod;
 import com.schoolsaas.repository.*;
-import com.schoolsaas.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,6 @@ public class TimetableService {
     private final ClassRepository classRepository;
     private final SubjectRepository subjectRepository;
     private final TeacherRepository teacherRepository;
-    private final TeacherActivityLogService activityLogService;
 
     @Transactional
     public TimetablePeriodDto createPeriod(UUID schoolId, TimetablePeriodDto dto) {
@@ -39,6 +39,33 @@ public class TimetableService {
         return mapPeriodDto(period);
     }
 
+    @Transactional
+    public TimetablePeriodDto updatePeriod(UUID schoolId, UUID periodId, TimetablePeriodDto dto) {
+        TimetablePeriod period = periodRepository.findById(periodId)
+                .orElseThrow(() -> new ResourceNotFoundException("Timetable period", "id", periodId));
+        if (!period.getSchoolId().equals(schoolId)) {
+            throw new ResourceNotFoundException("Timetable period", "id", periodId);
+        }
+        period.setName(dto.getName());
+        period.setStartTime(dto.getStartTime());
+        period.setEndTime(dto.getEndTime());
+        period.setPeriodOrder(dto.getPeriodOrder());
+        period.setIsBreak(dto.getIsBreak());
+        period = periodRepository.save(period);
+        return mapPeriodDto(period);
+    }
+
+    @Transactional
+    public void deletePeriod(UUID schoolId, UUID periodId) {
+        TimetablePeriod period = periodRepository.findById(periodId)
+                .orElseThrow(() -> new ResourceNotFoundException("Timetable period", "id", periodId));
+        if (!period.getSchoolId().equals(schoolId)) {
+            throw new ResourceNotFoundException("Timetable period", "id", periodId);
+        }
+        period.setIsActive(false);
+        periodRepository.save(period);
+    }
+
     public List<TimetablePeriodDto> getPeriods(UUID schoolId) {
         return periodRepository.findBySchoolIdAndIsActiveTrueOrderByPeriodOrderAsc(schoolId)
                 .stream().map(this::mapPeriodDto).collect(Collectors.toList());
@@ -46,6 +73,40 @@ public class TimetableService {
 
     @Transactional
     public TimetableEntryDto createEntry(UUID schoolId, TimetableEntryDto dto) {
+        String className = classRepository.findById(dto.getClassId()).map(c -> c.getName()).orElse("This class");
+
+        // Class-level conflict: same class + period + day
+        var classConflict = entryRepository.findBySchoolIdAndClassIdAndPeriodIdAndDayOfWeekAndIsActiveTrue(
+                schoolId, dto.getClassId(), dto.getPeriodId(), dto.getDayOfWeek());
+        if (classConflict.isPresent()) {
+            TimetableEntry existing = classConflict.get();
+            String subjectName = existing.getSubjectId() != null
+                    ? subjectRepository.findById(existing.getSubjectId()).map(s -> s.getName()).orElse("Unknown Subject")
+                    : "Unknown Subject";
+            String periodName = periodRepository.findById(existing.getPeriodId()).map(p -> p.getName()).orElse("Unknown Period");
+            throw new BadRequestException(
+                    "Scheduling conflict: " + className + " already has " + subjectName +
+                    " scheduled during " + periodName + ". Please choose a different period or day.");
+        }
+
+        // Teacher-level conflict: same teacher + period + day (any class)
+        List<TimetableEntry> teacherEntries = entryRepository.findBySchoolIdAndTeacherIdAndIsActiveTrue(schoolId, dto.getTeacherId())
+                .stream()
+                .filter(e -> e.getPeriodId().equals(dto.getPeriodId()) && e.getDayOfWeek().equals(dto.getDayOfWeek()))
+                .toList();
+        if (!teacherEntries.isEmpty()) {
+            TimetableEntry existing = teacherEntries.get(0);
+            String existingTeacherName = teacherRepository.findById(existing.getTeacherId()).map(t -> t.getFullName()).orElse("Another teacher");
+            String existingClassName = classRepository.findById(existing.getClassId()).map(c -> c.getName()).orElse("another class");
+            String existingSubjectName = existing.getSubjectId() != null
+                    ? subjectRepository.findById(existing.getSubjectId()).map(s -> s.getName()).orElse("a subject")
+                    : "a subject";
+            String periodName = periodRepository.findById(existing.getPeriodId()).map(p -> p.getName()).orElse("this period");
+            throw new BadRequestException(
+                    "Scheduling conflict: " + existingTeacherName + " is already teaching " + existingSubjectName +
+                    " for " + existingClassName + " during " + periodName + ". Please choose a different teacher, period, or day.");
+        }
+
         TimetableEntry entry = TimetableEntry.builder()
                 .schoolId(schoolId)
                 .classId(dto.getClassId())
@@ -57,6 +118,17 @@ public class TimetableService {
                 .build();
         entry = entryRepository.save(entry);
         return mapEntryDto(entry);
+    }
+
+    @Transactional
+    public void deleteEntry(UUID schoolId, UUID entryId) {
+        TimetableEntry entry = entryRepository.findById(entryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Timetable entry", "id", entryId));
+        if (!entry.getSchoolId().equals(schoolId)) {
+            throw new ResourceNotFoundException("Timetable entry", "id", entryId);
+        }
+        entry.setIsActive(false);
+        entryRepository.save(entry);
     }
 
     public List<TimetableEntryDto> getClassTimetable(UUID schoolId, UUID classId) {

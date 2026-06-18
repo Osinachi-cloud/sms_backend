@@ -27,6 +27,19 @@ public class TimetableController {
         return ResponseEntity.ok(timetableService.createPeriod(schoolId, dto));
     }
 
+    @PutMapping("/periods/{periodId}")
+    @PreAuthorize("hasPermission(#schoolId, 'timetable.update') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<TimetablePeriodDto> updatePeriod(@PathVariable UUID schoolId, @PathVariable UUID periodId, @RequestBody TimetablePeriodDto dto) {
+        return ResponseEntity.ok(timetableService.updatePeriod(schoolId, periodId, dto));
+    }
+
+    @DeleteMapping("/periods/{periodId}")
+    @PreAuthorize("hasPermission(#schoolId, 'timetable.delete') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<Void> deletePeriod(@PathVariable UUID schoolId, @PathVariable UUID periodId) {
+        timetableService.deletePeriod(schoolId, periodId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/periods")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<TimetablePeriodDto>> getPeriods(@PathVariable UUID schoolId, Pageable pageable) {
@@ -38,6 +51,13 @@ public class TimetableController {
     @PreAuthorize("hasPermission(#schoolId, 'timetable.create') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
     public ResponseEntity<TimetableEntryDto> createEntry(@PathVariable UUID schoolId, @RequestBody TimetableEntryDto dto) {
         return ResponseEntity.ok(timetableService.createEntry(schoolId, dto));
+    }
+
+    @DeleteMapping("/entries/{entryId}")
+    @PreAuthorize("hasPermission(#schoolId, 'timetable.delete') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<Void> deleteEntry(@PathVariable UUID schoolId, @PathVariable UUID entryId) {
+        timetableService.deleteEntry(schoolId, entryId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/classes/{classId}")

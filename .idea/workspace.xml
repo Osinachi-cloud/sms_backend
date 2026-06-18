@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6a3efcbc-8641-40a5-9e3d-8fb88aa309bc" name="Changes" comment="" />
+    <list default="true" id="6a3efcbc-8641-40a5-9e3d-8fb88aa309bc" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/TimetableController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/TimetableController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/TimetableEntryRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/TimetableEntryRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/TimetableService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/TimetableService.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
