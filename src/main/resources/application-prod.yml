@@ -48,7 +48,7 @@ spring:
   flyway:
     # IMPORTANT: Set to 'false' for FIRST boot on an empty database.
     # After the first successful startup, change this back to 'true'.
-    enabled: false
+    enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true
