@@ -34,18 +34,27 @@ SELECT uuid_generate_v4(), r.id, 'product.create', NOW()
 FROM roles r
 WHERE r.name IN ('SUPER_ADMIN', 'ADMIN', 'FINANCE_MANAGER')
   AND r.is_active = true
-ON CONFLICT (role_id, permission_key) DO NOTHING;
+  AND NOT EXISTS (
+      SELECT 1 FROM role_permissions rp
+      WHERE rp.role_id = r.id AND rp.permission_key = 'product.create'
+  );
 
 INSERT INTO role_permissions (id, role_id, permission_key, created_at)
 SELECT uuid_generate_v4(), r.id, 'payment.gateway.switch', NOW()
 FROM roles r
 WHERE r.name IN ('SUPER_ADMIN', 'ADMIN', 'FINANCE_MANAGER')
   AND r.is_active = true
-ON CONFLICT (role_id, permission_key) DO NOTHING;
+  AND NOT EXISTS (
+      SELECT 1 FROM role_permissions rp
+      WHERE rp.role_id = r.id AND rp.permission_key = 'payment.gateway.switch'
+  );
 
 INSERT INTO role_permissions (id, role_id, permission_key, created_at)
 SELECT uuid_generate_v4(), r.id, 'cms.content.edit.any', NOW()
 FROM roles r
 WHERE r.name IN ('SUPER_ADMIN', 'ADMIN')
   AND r.is_active = true
-ON CONFLICT (role_id, permission_key) DO NOTHING;
+  AND NOT EXISTS (
+      SELECT 1 FROM role_permissions rp
+      WHERE rp.role_id = r.id AND rp.permission_key = 'cms.content.edit.any'
+  );

@@ -17,7 +17,10 @@ SELECT uuid_generate_v4(), r.id, 'payment.gateway.manage', NOW()
 FROM roles r
 WHERE r.name = 'ADMIN'
   AND r.is_active = true
-ON CONFLICT (role_id, permission_key) DO NOTHING;
+  AND NOT EXISTS (
+      SELECT 1 FROM role_permissions rp
+      WHERE rp.role_id = r.id AND rp.permission_key = 'payment.gateway.manage'
+  );
 
 -- Grant payment.gateway.switch to ADMIN roles
 INSERT INTO role_permissions (id, role_id, permission_key, created_at)
@@ -25,4 +28,7 @@ SELECT uuid_generate_v4(), r.id, 'payment.gateway.switch', NOW()
 FROM roles r
 WHERE r.name = 'ADMIN'
   AND r.is_active = true
-ON CONFLICT (role_id, permission_key) DO NOTHING;
+  AND NOT EXISTS (
+      SELECT 1 FROM role_permissions rp
+      WHERE rp.role_id = r.id AND rp.permission_key = 'payment.gateway.switch'
+  );

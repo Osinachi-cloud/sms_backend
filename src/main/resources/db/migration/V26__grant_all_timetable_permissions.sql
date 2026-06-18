@@ -25,7 +25,10 @@ CROSS JOIN (VALUES
 ) AS p(key)
 WHERE r.name IN ('ADMIN', 'SUPER_ADMIN')
   AND r.is_active = true
-ON CONFLICT (role_id, permission_key) DO NOTHING;
+  AND NOT EXISTS (
+      SELECT 1 FROM role_permissions rp
+      WHERE rp.role_id = r.id AND rp.permission_key = p.key
+  );
 
 -- 3. Grant ALL timetable permissions to TEACHER roles
 INSERT INTO role_permissions (id, role_id, permission_key, created_at)
@@ -39,7 +42,10 @@ CROSS JOIN (VALUES
 ) AS p(key)
 WHERE r.name = 'TEACHER'
   AND r.is_active = true
-ON CONFLICT (role_id, permission_key) DO NOTHING;
+  AND NOT EXISTS (
+      SELECT 1 FROM role_permissions rp
+      WHERE rp.role_id = r.id AND rp.permission_key = p.key
+  );
 
 -- 4. Grant timetable.read to STUDENT roles
 INSERT INTO role_permissions (id, role_id, permission_key, created_at)
@@ -47,4 +53,7 @@ SELECT uuid_generate_v4(), r.id, 'timetable.read', NOW()
 FROM roles r
 WHERE r.name = 'STUDENT'
   AND r.is_active = true
-ON CONFLICT (role_id, permission_key) DO NOTHING;
+  AND NOT EXISTS (
+      SELECT 1 FROM role_permissions rp
+      WHERE rp.role_id = r.id AND rp.permission_key = 'timetable.read'
+  );
