@@ -115,7 +115,67 @@ public class TimetableService {
                 .periodId(dto.getPeriodId())
                 .dayOfWeek(dto.getDayOfWeek())
                 .room(dto.getRoom())
+                .link(dto.getLink())
                 .build();
+        entry = entryRepository.save(entry);
+        return mapEntryDto(entry);
+    }
+
+    @Transactional
+    public TimetableEntryDto updateEntry(UUID schoolId, UUID entryId, TimetableEntryDto dto) {
+        TimetableEntry entry = entryRepository.findById(entryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Timetable entry", "id", entryId));
+        if (!entry.getSchoolId().equals(schoolId)) {
+            throw new ResourceNotFoundException("Timetable entry", "id", entryId);
+        }
+
+        // Only check conflicts if period, day, or teacher changed
+        boolean periodChanged = !entry.getPeriodId().equals(dto.getPeriodId());
+        boolean dayChanged = !entry.getDayOfWeek().equals(dto.getDayOfWeek());
+        boolean teacherChanged = dto.getTeacherId() != null && !dto.getTeacherId().equals(entry.getTeacherId());
+
+        if (periodChanged || dayChanged || teacherChanged) {
+            // Class-level conflict: same class + period + day (excluding this entry)
+            var classConflict = entryRepository.findBySchoolIdAndClassIdAndPeriodIdAndDayOfWeekAndIsActiveTrue(
+                    schoolId, dto.getClassId(), dto.getPeriodId(), dto.getDayOfWeek());
+            if (classConflict.isPresent() && !classConflict.get().getId().equals(entryId)) {
+                TimetableEntry existing = classConflict.get();
+                String className = classRepository.findById(dto.getClassId()).map(c -> c.getName()).orElse("This class");
+                String subjectName = existing.getSubjectId() != null
+                        ? subjectRepository.findById(existing.getSubjectId()).map(s -> s.getName()).orElse("Unknown Subject")
+                        : "Unknown Subject";
+                String periodName = periodRepository.findById(existing.getPeriodId()).map(p -> p.getName()).orElse("Unknown Period");
+                throw new BadRequestException(
+                        "Scheduling conflict: " + className + " already has " + subjectName +
+                        " scheduled during " + periodName + ". Please choose a different period or day.");
+            }
+
+            // Teacher-level conflict: same teacher + period + day (any class, excluding this entry)
+            List<TimetableEntry> teacherEntries = entryRepository.findBySchoolIdAndTeacherIdAndIsActiveTrue(schoolId, dto.getTeacherId())
+                    .stream()
+                    .filter(e -> e.getPeriodId().equals(dto.getPeriodId()) && e.getDayOfWeek().equals(dto.getDayOfWeek()) && !e.getId().equals(entryId))
+                    .toList();
+            if (!teacherEntries.isEmpty()) {
+                TimetableEntry existing = teacherEntries.get(0);
+                String existingTeacherName = teacherRepository.findById(existing.getTeacherId()).map(t -> t.getFullName()).orElse("Another teacher");
+                String existingClassName = classRepository.findById(existing.getClassId()).map(c -> c.getName()).orElse("another class");
+                String existingSubjectName = existing.getSubjectId() != null
+                        ? subjectRepository.findById(existing.getSubjectId()).map(s -> s.getName()).orElse("a subject")
+                        : "a subject";
+                String periodName = periodRepository.findById(existing.getPeriodId()).map(p -> p.getName()).orElse("this period");
+                throw new BadRequestException(
+                        "Scheduling conflict: " + existingTeacherName + " is already teaching " + existingSubjectName +
+                        " for " + existingClassName + " during " + periodName + ". Please choose a different teacher, period, or day.");
+            }
+        }
+
+        entry.setClassId(dto.getClassId());
+        entry.setSubjectId(dto.getSubjectId());
+        entry.setTeacherId(dto.getTeacherId());
+        entry.setPeriodId(dto.getPeriodId());
+        entry.setDayOfWeek(dto.getDayOfWeek());
+        entry.setRoom(dto.getRoom());
+        entry.setLink(dto.getLink());
         entry = entryRepository.save(entry);
         return mapEntryDto(entry);
     }
@@ -169,6 +229,7 @@ public class TimetableService {
         });
         dto.setDayOfWeek(e.getDayOfWeek());
         dto.setRoom(e.getRoom());
+        dto.setLink(e.getLink());
         return dto;
     }
 }

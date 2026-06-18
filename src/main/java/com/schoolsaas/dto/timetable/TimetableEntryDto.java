@@ -20,4 +20,5 @@ public class TimetableEntryDto {
     private LocalTime endTime;
     private Integer dayOfWeek;
     private String room;
+    private String link;
 }

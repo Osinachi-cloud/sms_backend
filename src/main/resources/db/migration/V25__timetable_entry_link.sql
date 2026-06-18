@@ -1,0 +1,1 @@
+ALTER TABLE timetable_entries ADD COLUMN IF NOT EXISTS link VARCHAR(500);

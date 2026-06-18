@@ -41,6 +41,9 @@ public class TimetableEntry {
 
     private String room;
 
+    @Column(name = "link", length = 500)
+    private String link;
+
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;

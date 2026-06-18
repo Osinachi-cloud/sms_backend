@@ -53,6 +53,12 @@ public class TimetableController {
         return ResponseEntity.ok(timetableService.createEntry(schoolId, dto));
     }
 
+    @PutMapping("/entries/{entryId}")
+    @PreAuthorize("hasPermission(#schoolId, 'timetable.update') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<TimetableEntryDto> updateEntry(@PathVariable UUID schoolId, @PathVariable UUID entryId, @RequestBody TimetableEntryDto dto) {
+        return ResponseEntity.ok(timetableService.updateEntry(schoolId, entryId, dto));
+    }
+
     @DeleteMapping("/entries/{entryId}")
     @PreAuthorize("hasPermission(#schoolId, 'timetable.delete') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
     public ResponseEntity<Void> deleteEntry(@PathVariable UUID schoolId, @PathVariable UUID entryId) {
