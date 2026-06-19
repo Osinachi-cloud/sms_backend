@@ -314,7 +314,8 @@ public class SchoolService {
                     "teacher.read", "teacher.create", "teacher.update", "teacher.delete", "teacher.assign.class",
                     "class.read", "class.create", "class.update", "class.delete",
                     "subject.read", "subject.create", "subject.update", "subject.delete",
-                    "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.approve", "cms.content.publish",
+                    "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.create",
+                    "cms.content.edit", "cms.content.edit.any", "cms.content.approve", "cms.content.publish",
                     "fee.read", "fee.create", "fee.update", "payment.read", "payment.create",
                     "payment.gateway.manage", "payment.gateway.switch",
                     "analytics.academic.view", "analytics.finance.view", "school.read", "school.update",
@@ -340,8 +341,8 @@ public class SchoolService {
                     "student.read", "student.grades.read", "student.grades.manage",
                     "student.attendance.read", "student.attendance.manage",
                     "class.read", "subject.read",
-                    "cms.folder.read", "cms.content.read", "cms.content.create",
-                    "cms.content.edit", "cms.content.submit"
+                    "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.create",
+                    "cms.content.edit", "cms.content.delete", "cms.content.submit"
             );
             for (String key : teacherKeys) {
                 if (permissionRepository.existsByKey(key)) {

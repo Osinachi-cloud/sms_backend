@@ -11,7 +11,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -116,6 +121,7 @@ public class TimetableService {
                 .dayOfWeek(dto.getDayOfWeek())
                 .room(dto.getRoom())
                 .link(dto.getLink())
+                .links(linksToJson(dto.getLinks()))
                 .build();
         entry = entryRepository.save(entry);
         return mapEntryDto(entry);
@@ -176,6 +182,7 @@ public class TimetableService {
         entry.setDayOfWeek(dto.getDayOfWeek());
         entry.setRoom(dto.getRoom());
         entry.setLink(dto.getLink());
+        entry.setLinks(linksToJson(dto.getLinks()));
         entry = entryRepository.save(entry);
         return mapEntryDto(entry);
     }
@@ -230,6 +237,27 @@ public class TimetableService {
         dto.setDayOfWeek(e.getDayOfWeek());
         dto.setRoom(e.getRoom());
         dto.setLink(e.getLink());
+        dto.setLinks(linksFromJson(e.getLinks()));
         return dto;
+    }
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private String linksToJson(List<Map<String, String>> links) {
+        if (links == null || links.isEmpty()) return null;
+        try {
+            return OBJECT_MAPPER.writeValueAsString(links);
+        } catch (JsonProcessingException ex) {
+            return null;
+        }
+    }
+
+    private List<Map<String, String>> linksFromJson(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return OBJECT_MAPPER.readValue(json, new TypeReference<List<Map<String, String>>>() {});
+        } catch (JsonProcessingException ex) {
+            return List.of();
+        }
     }
 }

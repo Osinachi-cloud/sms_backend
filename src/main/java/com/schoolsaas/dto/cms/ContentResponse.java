@@ -21,6 +21,12 @@ public class ContentResponse {
     private String contentType;
     private UUID folderId;
     private String folderName;
+    private UUID subjectId;
+    private String subjectName;
+    private UUID termId;
+    private String termName;
+    private UUID sessionId;
+    private String sessionName;
     private UUID teacherId;
     private String teacherName;
     private List<java.util.UUID> targetClassIds;
@@ -37,6 +43,10 @@ public class ContentResponse {
     private Map<String, Object> metadata;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String body;
+    private List<String> tags;
+    private String thumbnailUrl;
+    private List<String> targetAudience;
 
     public static ContentResponse fromEntity(ContentItem content) {
         return ContentResponse.builder()
@@ -45,6 +55,12 @@ public class ContentResponse {
                 .contentType(content.getContentType())
                 .folderId(content.getFolderId())
                 .folderName(content.getFolder() != null ? content.getFolder().getName() : null)
+                .subjectId(content.getSubjectId())
+                .subjectName(content.getSubject() != null ? content.getSubject().getName() : null)
+                .termId(content.getTermId())
+                .termName(content.getTerm() != null ? content.getTerm().getName() : null)
+                .sessionId(content.getSessionId())
+                .sessionName(content.getSession() != null ? content.getSession().getName() : null)
                 .teacherId(content.getTeacherId())
                 .teacherName(content.getTeacher() != null ? content.getTeacher().getFullName() : null)
                 .targetClassIds(content.getTargetClassIds())
@@ -61,6 +77,10 @@ public class ContentResponse {
                 .metadata(content.getMetadata())
                 .createdAt(content.getCreatedAt())
                 .updatedAt(content.getUpdatedAt())
+                .body(content.getBody())
+                .tags(content.getTags())
+                .thumbnailUrl(content.getThumbnailUrl())
+                .targetAudience(content.getTargetAudience())
                 .build();
     }
 }

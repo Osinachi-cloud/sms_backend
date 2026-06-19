@@ -21,4 +21,5 @@ public class TimetableEntryDto {
     private Integer dayOfWeek;
     private String room;
     private String link;
+    private java.util.List<java.util.Map<String, String>> links;
 }

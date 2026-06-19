@@ -147,7 +147,7 @@ public class DashboardService {
                 .specialization(teacher.getSpecialization())
                 .build();
 
-        List<TeacherClass> assignments = teacherClassRepository.findByTeacherId(teacherId);
+        List<TeacherClass> assignments = teacherClassRepository.findBySchoolIdAndTeacherId(schoolId, teacherId);
 
         Map<UUID, SchoolClass> classMap = classRepository.findBySchoolId(schoolId)
                 .stream().collect(Collectors.toMap(SchoolClass::getId, c -> c));

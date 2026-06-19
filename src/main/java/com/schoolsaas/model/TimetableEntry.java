@@ -44,6 +44,9 @@ public class TimetableEntry {
     @Column(name = "link", length = 500)
     private String link;
 
+    @Column(name = "links", columnDefinition = "jsonb")
+    private String links; // stored as JSON array string
+
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;

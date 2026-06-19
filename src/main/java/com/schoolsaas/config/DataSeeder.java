@@ -331,7 +331,8 @@ public class DataSeeder implements CommandLineRunner {
                 "student.grades.read", "student.grades.manage", "student.attendance.read", "student.attendance.manage",
                 "teacher.read", "teacher.create", "teacher.update", "teacher.delete", "teacher.assign.class",
                 "class.read", "class.create", "class.update", "class.delete",
-                "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.approve", "cms.content.publish",
+                "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.create",
+                "cms.content.edit", "cms.content.edit.any", "cms.content.approve", "cms.content.publish",
                 "cms.content.delete",
                 "fee.read", "fee.create", "fee.update", "payment.read", "payment.create",
                 "analytics.academic.view", "analytics.finance.view", "school.read", "school.update",
@@ -346,8 +347,8 @@ public class DataSeeder implements CommandLineRunner {
         List<String> teacherKeys = List.of(
                 "student.read", "student.grades.read", "student.grades.manage",
                 "student.attendance.read", "student.attendance.manage",
-                "class.read", "cms.folder.read", "cms.content.read", "cms.content.create",
-                "cms.content.edit", "cms.content.submit", "subject.read",
+                "class.read", "cms.folder.read", "cms.folder.create", "cms.content.read", "cms.content.create",
+                "cms.content.edit", "cms.content.delete", "cms.content.submit", "subject.read",
                 "timetable.read", "timetable.create", "timetable.update", "timetable.delete"
         );
         assignPermissions(roleId, teacherKeys);

@@ -22,7 +22,7 @@ public class QuizController {
     private final QuizService quizService;
 
     @PostMapping
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.create') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("hasPermission(#schoolId, 'cms.content.create') or hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
     public ResponseEntity<QuizDto> createQuiz(@PathVariable UUID schoolId, @RequestBody QuizDto dto) {
         return ResponseEntity.ok(quizService.createQuiz(schoolId, dto));
     }

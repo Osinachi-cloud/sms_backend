@@ -15,6 +15,9 @@ public class CreateContentRequest {
 
     private String contentType = "NOTE";
     private UUID folderId;
+    private UUID subjectId;
+    private UUID termId;
+    private UUID sessionId;
     private List<UUID> targetClassIds;
     private String richText;
     private List<String> fileUrls;
@@ -22,4 +25,8 @@ public class CreateContentRequest {
     private LocalDateTime dueDate;
     private LocalDateTime expiresAt;
     private Map<String, Object> metadata;
+    private String body;
+    private List<String> tags;
+    private String thumbnailUrl;
+    private List<String> targetAudience;
 }

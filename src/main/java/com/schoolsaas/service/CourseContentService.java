@@ -111,11 +111,14 @@ public class CourseContentService {
             throw new ResourceNotFoundException("CourseContent", "id", contentId);
         }
         // Non-admins can only edit their own content
-        if (!isAdmin && content.getTeacherId() != null) {
+        if (!isAdmin) {
             UUID userId = SecurityUtils.getCurrentUserId();
             Teacher teacher = teacherRepository.findByUserId(userId).orElse(null);
             UUID teacherId = teacher != null ? teacher.getId() : null;
-            if (teacherId == null || !teacherId.equals(content.getTeacherId())) {
+            if (teacherId == null) {
+                throw new com.schoolsaas.exception.BadRequestException("You do not have permission to edit this content");
+            }
+            if (content.getTeacherId() == null || !teacherId.equals(content.getTeacherId())) {
                 throw new com.schoolsaas.exception.BadRequestException("You can only edit content you created");
             }
         }
@@ -167,11 +170,14 @@ public class CourseContentService {
         if (!content.getSchoolId().equals(schoolId)) {
             throw new ResourceNotFoundException("CourseContent", "id", contentId);
         }
-        if (!isAdmin && content.getTeacherId() != null) {
+        if (!isAdmin) {
             UUID userId = SecurityUtils.getCurrentUserId();
             Teacher teacher = teacherRepository.findByUserId(userId).orElse(null);
             UUID teacherId = teacher != null ? teacher.getId() : null;
-            if (teacherId == null || !teacherId.equals(content.getTeacherId())) {
+            if (teacherId == null) {
+                throw new com.schoolsaas.exception.BadRequestException("You do not have permission to delete this content");
+            }
+            if (content.getTeacherId() == null || !teacherId.equals(content.getTeacherId())) {
                 throw new com.schoolsaas.exception.BadRequestException("You can only delete content you created");
             }
         }

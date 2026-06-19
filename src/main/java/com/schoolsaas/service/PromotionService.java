@@ -25,15 +25,14 @@ public class PromotionService {
     private final GradeRepository gradeRepository;
     private final TermRepository termRepository;
     private final TeacherRepository teacherRepository;
+    private final TeacherClassRepository teacherClassRepository;
     private final UserRepository userRepository;
 
     private static final BigDecimal PASSING_THRESHOLD = new BigDecimal("40");
 
     @Transactional(readOnly = true)
     public List<PromotionDto.StudentPromotionInfo> getEligibleStudents(UUID schoolId, UUID classId, UUID teacherUserId) {
-        // Verify teacher has access to this class
-        Teacher teacher = teacherRepository.findByUserId(teacherUserId)
-                .orElseThrow(() -> new BadRequestException("Teacher profile not found"));
+        verifyTeacherClassAccess(teacherUserId, classId);
 
         SchoolClass currentClass = classRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class", "id", classId));
@@ -99,6 +98,8 @@ public class PromotionService {
             throw new BadRequestException("Student is not assigned to any class");
         }
 
+        verifyTeacherClassAccess(teacherUserId, student.getClassId());
+
         SchoolClass currentClass = classRepository.findById(student.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class", "id", student.getClassId()));
 
@@ -149,6 +150,8 @@ public class PromotionService {
 
     @Transactional
     public PromotionDto.BatchPromotionResult promoteBatch(UUID schoolId, UUID classId, UUID teacherUserId, PromotionDto.BatchPromotionRequest request) {
+        verifyTeacherClassAccess(teacherUserId, classId);
+
         List<PromotionDto.PromotionResult> results = new ArrayList<>();
         int promoted = 0;
         int failed = 0;
@@ -175,6 +178,19 @@ public class PromotionService {
                 .failed(failed)
                 .results(results)
                 .build();
+    }
+
+    private void verifyTeacherClassAccess(UUID teacherUserId, UUID classId) {
+        Optional<Teacher> teacherOpt = teacherRepository.findByUserId(teacherUserId);
+        if (teacherOpt.isEmpty()) {
+            // No teacher profile means admin or non-teacher user — allow access
+            return;
+        }
+        Teacher teacher = teacherOpt.get();
+        List<UUID> assignedClassIds = teacherClassRepository.findClassIdsByTeacherId(teacher.getId());
+        if (!assignedClassIds.contains(classId)) {
+            throw new BadRequestException("You are not assigned to this class");
+        }
     }
 
     private UUID findNextClassId(UUID schoolId, SchoolClass currentClass) {

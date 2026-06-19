@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -170,6 +171,27 @@ public class TeacherService {
         }
 
         teacher = teacherRepository.save(teacher);
+
+        // Update subject-class assignments if provided
+        if (request.getSubjectAssignments() != null) {
+            // Remove existing assignments
+            List<TeacherClass> existing = teacherClassRepository.findByTeacherId(teacherId);
+            teacherClassRepository.deleteAll(existing);
+
+            // Create new assignments
+            for (CreateTeacherRequest.SubjectClassAssignment sca : request.getSubjectAssignments()) {
+                if (sca.getSubjectId() != null && sca.getClassId() != null) {
+                    TeacherClass tc = TeacherClass.builder()
+                            .teacherId(teacher.getId())
+                            .classId(sca.getClassId())
+                            .subjectId(sca.getSubjectId())
+                            .isClassTeacher(false)
+                            .build();
+                    teacherClassRepository.save(tc);
+                }
+            }
+        }
+
         log.info("Teacher updated: {}", teacherId);
         return TeacherResponse.fromEntity(teacher);
     }

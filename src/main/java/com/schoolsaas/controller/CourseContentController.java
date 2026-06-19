@@ -75,7 +75,7 @@ public class CourseContentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.create') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    @PreAuthorize("hasPermission(#schoolId, 'cms.content.create') or hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
     public ResponseEntity<CourseContentResponse> createContent(
             @PathVariable UUID schoolId,
             @RequestBody CourseContentRequest request) {

@@ -20,6 +20,14 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, UUID> 
 
     List<ContentItem> findByFolderId(UUID folderId);
 
+    Page<ContentItem> findBySchoolIdAndFolderId(UUID schoolId, UUID folderId, Pageable pageable);
+
+    @Query("SELECT c FROM ContentItem c WHERE c.schoolId = :schoolId AND c.subjectId = :subjectId ORDER BY c.createdAt DESC")
+    Page<ContentItem> findBySchoolIdAndSubjectId(UUID schoolId, UUID subjectId, Pageable pageable);
+
+    @Query("SELECT c FROM ContentItem c WHERE c.schoolId = :schoolId AND c.folderId IS NULL ORDER BY c.createdAt DESC")
+    Page<ContentItem> findUnfolderedBySchoolId(UUID schoolId, Pageable pageable);
+
     Page<ContentItem> findByTeacherId(UUID teacherId, Pageable pageable);
 
     @Query("SELECT c FROM ContentItem c WHERE c.schoolId = :schoolId AND c.status = 'PENDING' ORDER BY c.createdAt DESC")

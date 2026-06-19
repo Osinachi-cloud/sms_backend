@@ -31,6 +31,15 @@ public class ContentItem {
     @Column(name = "folder_id")
     private UUID folderId;
 
+    @Column(name = "subject_id")
+    private UUID subjectId;
+
+    @Column(name = "term_id")
+    private UUID termId;
+
+    @Column(name = "session_id")
+    private UUID sessionId;
+
     @Column(name = "teacher_id")
     private UUID teacherId;
 
@@ -100,6 +109,14 @@ public class ContentItem {
     @Column(name = "tags", columnDefinition = "TEXT[]")
     private List<String> tags;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "target_audience", columnDefinition = "jsonb")
+    @Builder.Default
+    private List<String> targetAudience = List.of();
+
+    @Column(name = "thumbnail_url")
+    private String thumbnailUrl;
+
     @Column(name = "updated_by")
     private UUID updatedBy;
 
@@ -130,4 +147,16 @@ public class ContentItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "folder_id", insertable = false, updatable = false)
     private ContentFolder folder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subject_id", insertable = false, updatable = false)
+    private Subject subject;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "term_id", insertable = false, updatable = false)
+    private Term term;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id", insertable = false, updatable = false)
+    private AcademicSession session;
 }
