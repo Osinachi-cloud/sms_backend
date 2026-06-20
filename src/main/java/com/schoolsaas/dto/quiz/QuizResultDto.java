@@ -16,5 +16,6 @@ public class QuizResultDto {
     private BigDecimal percentage;
     private String gradeLetter;
     private String status;
+    private Boolean showCorrectAnswers;
     private List<QuizAnswerDto> answers;
 }

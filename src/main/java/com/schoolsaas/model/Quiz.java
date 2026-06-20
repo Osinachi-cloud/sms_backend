@@ -80,6 +80,24 @@ public class Quiz {
     @Builder.Default
     private String status = "DRAFT";
 
+    @Column(name = "quiz_type")
+    @Builder.Default
+    private String quizType = "QUIZ"; // EXAM, TEST, QUIZ
+
+    @Column(name = "is_enabled")
+    @Builder.Default
+    private Boolean isEnabled = true;
+
+    @Column(name = "show_correct_answers")
+    @Builder.Default
+    private Boolean showCorrectAnswers = false;
+
+    @Column(name = "term_id")
+    private UUID termId;
+
+    @Column(name = "session_id")
+    private UUID sessionId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

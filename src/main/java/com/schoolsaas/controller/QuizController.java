@@ -76,15 +76,45 @@ public class QuizController {
 
     @PostMapping("/{quizId}/submit")
     public ResponseEntity<QuizResultDto> submitQuiz(@PathVariable UUID quizId, @RequestBody SubmitQuizRequest request) {
-        // In real app, get studentId from auth context
-        List<Map<String, Object>> answers = request != null ? request.getAnswers() : null;
-        UUID studentId = null;
-        if (answers != null && !answers.isEmpty() && answers.getFirst().get("studentId") != null) {
-            studentId = UUID.fromString(answers.getFirst().get("studentId").toString());
+        UUID studentId = request != null ? request.getStudentId() : null;
+        if (studentId == null) {
+            List<Map<String, Object>> answers = request != null ? request.getAnswers() : null;
+            if (answers != null && !answers.isEmpty() && answers.getFirst() != null && answers.getFirst().get("studentId") != null) {
+                studentId = UUID.fromString(answers.getFirst().get("studentId").toString());
+            }
         }
         if (studentId == null) {
-            throw new IllegalArgumentException("studentId is required in the first answer");
+            throw new IllegalArgumentException("studentId is required");
         }
         return ResponseEntity.ok(quizService.submitQuiz(quizId, studentId, request));
+    }
+
+    @GetMapping("/{quizId}/submissions")
+    @PreAuthorize("hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<List<com.schoolsaas.model.QuizSubmission>> getSubmissions(
+            @PathVariable UUID schoolId, @PathVariable UUID quizId) {
+        return ResponseEntity.ok(quizService.getQuizSubmissions(quizId));
+    }
+
+    @GetMapping("/student/{studentId}/history")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<QuizResultDto>> getStudentHistory(
+            @PathVariable UUID schoolId, @PathVariable UUID studentId) {
+        return ResponseEntity.ok(quizService.getStudentQuizHistory(studentId));
+    }
+
+    @PostMapping("/{quizId}/toggle")
+    @PreAuthorize("hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<QuizDto> toggleEnabled(
+            @PathVariable UUID schoolId, @PathVariable UUID quizId) {
+        return ResponseEntity.ok(quizService.toggleQuizEnabled(schoolId, quizId));
+    }
+
+    @PostMapping("/{quizId}/add-to-grades")
+    @PreAuthorize("hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<Void> addToGrades(
+            @PathVariable UUID schoolId, @PathVariable UUID quizId) {
+        quizService.addQuizScoreToGrade(schoolId, quizId);
+        return ResponseEntity.ok().build();
     }
 }

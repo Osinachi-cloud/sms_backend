@@ -18,6 +18,8 @@ public interface GradeRepository extends JpaRepository<Grade, UUID> {
 
     List<Grade> findBySchoolIdAndSubjectIdAndTermId(UUID schoolId, UUID subjectId, UUID termId);
 
+    java.util.Optional<Grade> findByStudentIdAndSubjectIdAndTermIdAndAssessmentType(UUID studentId, UUID subjectId, UUID termId, String assessmentType);
+
     @Query("SELECT g FROM Grade g WHERE g.schoolId = :schoolId AND g.studentId = :studentId ORDER BY g.createdAt DESC")
     List<Grade> findBySchoolIdAndStudentId(@Param("schoolId") UUID schoolId, @Param("studentId") UUID studentId);
 

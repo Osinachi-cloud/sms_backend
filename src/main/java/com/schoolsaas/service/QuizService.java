@@ -28,6 +28,9 @@ public class QuizService {
     private final StudentRepository studentRepository;
     private final ClassRepository classRepository;
     private final SubjectRepository subjectRepository;
+    private final TermRepository termRepository;
+    private final AcademicSessionRepository sessionRepository;
+    private final GradeRepository gradeRepository;
     private final NotificationService notificationService;
     private final GamificationService gamificationService;
 
@@ -48,6 +51,11 @@ public class QuizService {
                 .maxAttempts(dto.getMaxAttempts() != null ? dto.getMaxAttempts() : 1)
                 .startTime(dto.getStartTime())
                 .endTime(dto.getEndTime())
+                .quizType(dto.getQuizType() != null ? dto.getQuizType() : "QUIZ")
+                .isEnabled(dto.getIsEnabled() != null ? dto.getIsEnabled() : true)
+                .showCorrectAnswers(dto.getShowCorrectAnswers() != null ? dto.getShowCorrectAnswers() : false)
+                .termId(dto.getTermId())
+                .sessionId(dto.getSessionId())
                 .targetClassIds(dto.getTargetClassIds() != null ? dto.getTargetClassIds() : (dto.getClassId() != null ? java.util.List.of(dto.getClassId()) : java.util.List.of()))
                 .createdBy(currentUserId)
                 .build();
@@ -85,7 +93,7 @@ public class QuizService {
             if (student != null && student.getSchoolId().equals(schoolId)) {
                 List<QuizDto> filtered = quizzes.getContent().stream()
                         .filter(q -> isQuizVisibleToStudent(q, student))
-                        .map(this::mapToDto)
+                        .map(q -> mapToDtoWithStudentInfo(q, studentId))
                         .collect(java.util.stream.Collectors.toList());
                 return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
             }
@@ -136,6 +144,11 @@ public class QuizService {
         quiz.setStartTime(dto.getStartTime());
         quiz.setEndTime(dto.getEndTime());
         quiz.setStatus(dto.getStatus() != null ? dto.getStatus() : quiz.getStatus());
+        quiz.setQuizType(dto.getQuizType() != null ? dto.getQuizType() : quiz.getQuizType());
+        quiz.setIsEnabled(dto.getIsEnabled() != null ? dto.getIsEnabled() : quiz.getIsEnabled());
+        quiz.setShowCorrectAnswers(dto.getShowCorrectAnswers() != null ? dto.getShowCorrectAnswers() : quiz.getShowCorrectAnswers());
+        quiz.setTermId(dto.getTermId());
+        quiz.setSessionId(dto.getSessionId());
         quiz = quizRepository.save(quiz);
 
         // Replace questions if provided
@@ -182,6 +195,18 @@ public class QuizService {
     public QuizDto startQuiz(UUID quizId, UUID studentId) {
         Quiz quiz = quizRepository.findById(quizId).orElseThrow();
 
+        if (Boolean.FALSE.equals(quiz.getIsEnabled())) {
+            throw new com.schoolsaas.exception.BadRequestException("This quiz is currently disabled");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (quiz.getStartTime() != null && now.isBefore(quiz.getStartTime())) {
+            throw new com.schoolsaas.exception.BadRequestException("This quiz has not started yet");
+        }
+        if (quiz.getEndTime() != null && now.isAfter(quiz.getEndTime())) {
+            throw new com.schoolsaas.exception.BadRequestException("This quiz has expired");
+        }
+
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student != null && !isQuizVisibleToStudent(quiz, student)) {
             throw new com.schoolsaas.exception.BadRequestException("You do not have access to this quiz");
@@ -189,17 +214,41 @@ public class QuizService {
 
         long attempts = submissionRepository.countByQuizIdAndStudentId(quizId, studentId);
         if (attempts >= quiz.getMaxAttempts()) {
-            throw new RuntimeException("Maximum attempts reached");
+            throw new com.schoolsaas.exception.BadRequestException("Maximum attempts reached");
+        }
+
+        // Auto-submit any stale IN_PROGRESS submissions
+        submissionRepository.findByQuizIdAndStudentIdAndStatus(quizId, studentId, "IN_PROGRESS")
+            .ifPresent(sub -> {
+                if (sub.getStartedAt() != null && quiz.getDurationMinutes() != null) {
+                    LocalDateTime deadline = sub.getStartedAt().plusMinutes(quiz.getDurationMinutes());
+                    if (now.isAfter(deadline)) {
+                        sub.setStatus("TIMED_OUT");
+                        sub.setSubmittedAt(deadline);
+                        submissionRepository.save(sub);
+                    }
+                }
+            });
+
+        // Check again after cleanup
+        long validAttempts = submissionRepository.countByQuizIdAndStudentIdAndStatusNot(quizId, studentId, "IN_PROGRESS");
+        if (validAttempts >= quiz.getMaxAttempts()) {
+            throw new com.schoolsaas.exception.BadRequestException("Maximum attempts reached");
         }
 
         QuizSubmission submission = QuizSubmission.builder()
                 .quizId(quizId)
                 .studentId(studentId)
-                .attemptNumber((int) attempts + 1)
+                .startedAt(now)
+                .attemptNumber((int) validAttempts + 1)
                 .build();
         submissionRepository.save(submission);
 
         QuizDto dto = mapToDto(quiz);
+        // Enforce time tracking: include deadline timestamp
+        if (quiz.getDurationMinutes() != null) {
+            dto.setEndTime(now.plusMinutes(quiz.getDurationMinutes()));
+        }
         // Don't send correct answers when starting!
         dto.getQuestions().forEach(q -> {
             q.setCorrectAnswer(null);
@@ -215,7 +264,24 @@ public class QuizService {
 
         QuizSubmission submission = submissionRepository
                 .findByQuizIdAndStudentIdAndStatus(quizId, studentId, "IN_PROGRESS")
-                .orElseThrow(() -> new RuntimeException("No active submission found"));
+                .orElseThrow(() -> new com.schoolsaas.exception.BadRequestException("No active submission found"));
+
+        // Enforce duration limit
+        LocalDateTime now = LocalDateTime.now();
+        if (quiz.getDurationMinutes() != null && submission.getStartedAt() != null) {
+            LocalDateTime deadline = submission.getStartedAt().plusMinutes(quiz.getDurationMinutes());
+            if (now.isAfter(deadline)) {
+                submission.setStatus("TIMED_OUT");
+                submission.setSubmittedAt(deadline);
+                submissionRepository.save(submission);
+                throw new com.schoolsaas.exception.BadRequestException("Time limit exceeded. Quiz has been auto-submitted.");
+            }
+        }
+
+        // Also check expiry
+        if (quiz.getEndTime() != null && now.isAfter(quiz.getEndTime())) {
+            throw new com.schoolsaas.exception.BadRequestException("This quiz has expired");
+        }
 
         BigDecimal totalScore = BigDecimal.ZERO;
         BigDecimal maxMarks = BigDecimal.ZERO;
@@ -223,9 +289,9 @@ public class QuizService {
 
         for (QuizQuestion question : questions) {
             maxMarks = maxMarks.add(question.getMarks());
-            Map<String, Object> answerData = request.getAnswers().stream()
-                    .filter(a -> question.getId().equals(UUID.fromString(a.get("questionId").toString())))
-                    .findFirst().orElse(null);
+            Map<String, Object> answerData = request.getAnswers() != null ? request.getAnswers().stream()
+                    .filter(a -> a != null && a.get("questionId") != null && question.getId().equals(UUID.fromString(a.get("questionId").toString())))
+                    .findFirst().orElse(null) : null;
 
             BigDecimal marksObtained = BigDecimal.ZERO;
             Boolean isCorrect = false;
@@ -259,7 +325,9 @@ public class QuizService {
             ad.setQuestionId(question.getId());
             ad.setQuestionText(question.getQuestionText());
             ad.setUserAnswer(userAnswer);
+            ad.setSelectedOptions(selectedOptions);
             ad.setCorrectAnswer(question.getCorrectAnswer());
+            ad.setCorrectAnswers(question.getCorrectAnswers());
             ad.setIsCorrect(isCorrect);
             ad.setMarksObtained(marksObtained);
             ad.setTotalMarks(question.getMarks());
@@ -267,13 +335,13 @@ public class QuizService {
             answerDtos.add(ad);
         }
 
-        BigDecimal percentage = maxMarks.compareTo(BigDecimal.ZERO) > 0 
-                ? totalScore.multiply(new BigDecimal("100")).divide(maxMarks, 2, RoundingMode.HALF_UP) 
+        BigDecimal percentage = maxMarks.compareTo(BigDecimal.ZERO) > 0
+                ? totalScore.multiply(new BigDecimal("100")).divide(maxMarks, 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
         double percentageDouble = percentage.doubleValue();
         String gradeLetter = percentageDouble >= 70 ? "A" : percentageDouble >= 60 ? "B" : percentageDouble >= 50 ? "C" : percentageDouble >= 45 ? "D" : "F";
 
-        submission.setSubmittedAt(LocalDateTime.now());
+        submission.setSubmittedAt(now);
         submission.setScore(totalScore);
         submission.setTotalMarks(maxMarks);
         submission.setPercentage(percentage);
@@ -293,6 +361,7 @@ public class QuizService {
         result.setPercentage(percentage);
         result.setGradeLetter(gradeLetter);
         result.setStatus(submission.getStatus());
+        result.setShowCorrectAnswers(quiz.getShowCorrectAnswers());
         result.setAnswers(answerDtos);
         return result;
     }
@@ -338,13 +407,22 @@ public class QuizService {
         return switch (question.getQuestionType()) {
             case "MCQ", "TRUE_FALSE" ->
                     userAnswer != null && userAnswer.equalsIgnoreCase(question.getCorrectAnswer());
-            case "FILL_BLANK" ->
+            case "FILL_BLANK", "SHORT_ANSWER" ->
                     userAnswer != null && question.getCorrectAnswer() != null &&
                     userAnswer.trim().equalsIgnoreCase(question.getCorrectAnswer().trim());
+            case "CHECKBOX" -> {
+                if (selectedOptions == null || question.getCorrectAnswers() == null) yield false;
+                yield new HashSet<>(selectedOptions).containsAll(question.getCorrectAnswers()) &&
+                        selectedOptions.size() == question.getCorrectAnswers().size();
+            }
             case "MATCHING" -> {
                 if (selectedOptions == null || question.getCorrectAnswers() == null) yield false;
                 yield new HashSet<>(selectedOptions).containsAll(question.getCorrectAnswers()) &&
                         selectedOptions.size() == question.getCorrectAnswers().size();
+            }
+            case "PARAGRAPH" -> {
+                // Paragraph requires manual grading; default to false until teacher grades
+                yield false;
             }
             default -> false;
         };
@@ -373,6 +451,17 @@ public class QuizService {
         dto.setStartTime(quiz.getStartTime());
         dto.setEndTime(quiz.getEndTime());
         dto.setStatus(quiz.getStatus());
+        dto.setQuizType(quiz.getQuizType());
+        dto.setIsEnabled(quiz.getIsEnabled());
+        dto.setShowCorrectAnswers(quiz.getShowCorrectAnswers());
+        dto.setTermId(quiz.getTermId());
+        if (quiz.getTermId() != null) {
+            termRepository.findById(quiz.getTermId()).ifPresent(t -> dto.setTermName(t.getName()));
+        }
+        dto.setSessionId(quiz.getSessionId());
+        if (quiz.getSessionId() != null) {
+            sessionRepository.findById(quiz.getSessionId()).ifPresent(s -> dto.setSessionName(s.getName()));
+        }
         List<QuizQuestion> questions = questionRepository.findByQuizIdOrderByOrderIndexAsc(quiz.getId());
         dto.setQuestionCount(questions.size());
         dto.setQuestions(questions.stream().map(q -> {
@@ -389,5 +478,101 @@ public class QuizService {
             return qd;
         }).collect(Collectors.toList()));
         return dto;
+    }
+
+    private QuizDto mapToDtoWithStudentInfo(Quiz quiz, UUID studentId) {
+        QuizDto dto = mapToDto(quiz);
+        List<QuizSubmission> subs = submissionRepository.findByQuizIdAndStudentId(quiz.getId(), studentId);
+        dto.setHasAttempted(!subs.isEmpty());
+        dto.setAttemptsUsed((int) subs.stream().filter(s -> !"IN_PROGRESS".equals(s.getStatus())).count());
+        dto.setBestScore(subs.stream()
+                .filter(s -> s.getScore() != null)
+                .map(QuizSubmission::getScore)
+                .max(BigDecimal::compareTo)
+                .orElse(null));
+        return dto;
+    }
+
+    public List<QuizSubmission> getQuizSubmissions(UUID quizId) {
+        return submissionRepository.findByQuizId(quizId);
+    }
+
+    public List<QuizResultDto> getStudentQuizHistory(UUID studentId) {
+        List<QuizSubmission> subs = submissionRepository.findByStudentId(studentId);
+        return subs.stream().map(sub -> {
+            Quiz quiz = quizRepository.findById(sub.getQuizId()).orElse(null);
+            List<QuizAnswer> answers = answerRepository.findBySubmissionId(sub.getId());
+            QuizResultDto dto = new QuizResultDto();
+            dto.setSubmissionId(sub.getId());
+            dto.setQuizId(sub.getQuizId());
+            dto.setQuizTitle(quiz != null ? quiz.getTitle() : "Unknown");
+            dto.setScore(sub.getScore());
+            dto.setTotalMarks(sub.getTotalMarks());
+            dto.setPercentage(sub.getPercentage());
+            dto.setGradeLetter(sub.getGradeLetter());
+            dto.setStatus(sub.getStatus());
+            dto.setAnswers(answers.stream().map(a -> {
+                QuizAnswerDto ad = new QuizAnswerDto();
+                ad.setQuestionId(a.getQuestionId());
+                QuizQuestion q = questionRepository.findById(a.getQuestionId()).orElse(null);
+                ad.setQuestionText(q != null ? q.getQuestionText() : "");
+                ad.setUserAnswer(a.getAnswer());
+                ad.setSelectedOptions(a.getSelectedOptions());
+                ad.setCorrectAnswer(q != null ? q.getCorrectAnswer() : null);
+                ad.setCorrectAnswers(q != null ? q.getCorrectAnswers() : null);
+                ad.setIsCorrect(a.getIsCorrect());
+                ad.setMarksObtained(a.getMarksObtained());
+                ad.setTotalMarks(q != null ? q.getMarks() : BigDecimal.ZERO);
+                ad.setExplanation(q != null ? q.getExplanation() : null);
+                return ad;
+            }).collect(Collectors.toList()));
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public QuizDto toggleQuizEnabled(UUID schoolId, UUID quizId) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new com.schoolsaas.exception.ResourceNotFoundException("Quiz", "id", quizId));
+        if (!quiz.getSchoolId().equals(schoolId)) {
+            throw new com.schoolsaas.exception.ResourceNotFoundException("Quiz", "id", quizId);
+        }
+        quiz.setIsEnabled(!Boolean.FALSE.equals(quiz.getIsEnabled()));
+        return mapToDto(quizRepository.save(quiz));
+    }
+
+    @Transactional
+    public void addQuizScoreToGrade(UUID schoolId, UUID quizId) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new com.schoolsaas.exception.ResourceNotFoundException("Quiz", "id", quizId));
+        if (!quiz.getSchoolId().equals(schoolId)) {
+            throw new com.schoolsaas.exception.ResourceNotFoundException("Quiz", "id", quizId);
+        }
+        if (quiz.getSubjectId() == null || quiz.getTermId() == null) {
+            throw new com.schoolsaas.exception.BadRequestException("Quiz must have subject and term to add to grades");
+        }
+        List<QuizSubmission> subs = submissionRepository.findByQuizId(quizId);
+        for (QuizSubmission sub : subs) {
+            if (sub.getScore() == null || sub.getTotalMarks() == null) continue;
+            Optional<Grade> existing = gradeRepository.findByStudentIdAndSubjectIdAndTermIdAndAssessmentType(
+                    sub.getStudentId(), quiz.getSubjectId(), quiz.getTermId(), "QUIZ_" + quizId);
+            if (existing.isPresent()) continue;
+            Grade grade = new Grade();
+            grade.setSchoolId(schoolId);
+            grade.setStudentId(sub.getStudentId());
+            grade.setSubjectId(quiz.getSubjectId());
+            grade.setTermId(quiz.getTermId());
+            grade.setAssessmentType("QUIZ_" + quizId);
+            grade.setScore(sub.getScore());
+            grade.setMaxScore(sub.getTotalMarks());
+            BigDecimal pct = sub.getTotalMarks().compareTo(BigDecimal.ZERO) > 0
+                    ? sub.getScore().multiply(new BigDecimal("100")).divide(sub.getTotalMarks(), 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+            double p = pct.doubleValue();
+            String gl = p >= 70 ? "A" : p >= 60 ? "B" : p >= 50 ? "C" : p >= 45 ? "D" : "F";
+            grade.setGradeLetter(gl);
+            grade.setRemarks("Auto-graded from " + (quiz.getQuizType() != null ? quiz.getQuizType() : "quiz") + ": " + quiz.getTitle());
+            gradeRepository.save(grade);
+        }
     }
 }

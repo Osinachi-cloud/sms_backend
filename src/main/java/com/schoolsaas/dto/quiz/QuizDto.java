@@ -26,6 +26,16 @@ public class QuizDto {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String status;
+    private String quizType;
+    private Boolean isEnabled;
+    private Boolean showCorrectAnswers;
+    private UUID termId;
+    private String termName;
+    private UUID sessionId;
+    private String sessionName;
     private Integer questionCount;
+    private Boolean hasAttempted;
+    private Integer attemptsUsed;
+    private BigDecimal bestScore;
     private List<QuizQuestionDto> questions = new java.util.ArrayList<>();
 }
