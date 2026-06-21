@@ -217,23 +217,38 @@ public class QuizService {
             throw new com.schoolsaas.exception.BadRequestException("Maximum attempts reached");
         }
 
-        // Auto-submit any stale IN_PROGRESS submissions
-        submissionRepository.findByQuizIdAndStudentIdAndStatus(quizId, studentId, "IN_PROGRESS")
-            .ifPresent(sub -> {
-                if (sub.getStartedAt() != null && quiz.getDurationMinutes() != null) {
-                    LocalDateTime deadline = sub.getStartedAt().plusMinutes(quiz.getDurationMinutes());
-                    if (now.isAfter(deadline)) {
-                        sub.setStatus("TIMED_OUT");
-                        sub.setSubmittedAt(deadline);
-                        submissionRepository.save(sub);
-                    }
+        // Auto-submit ALL stale IN_PROGRESS submissions
+        List<QuizSubmission> inProgressSubs = submissionRepository.findByQuizIdAndStudentIdAndStatus(quizId, studentId, "IN_PROGRESS");
+        for (QuizSubmission sub : inProgressSubs) {
+            if (sub.getStartedAt() != null && quiz.getDurationMinutes() != null) {
+                LocalDateTime deadline = sub.getStartedAt().plusMinutes(quiz.getDurationMinutes());
+                if (now.isAfter(deadline)) {
+                    sub.setStatus("TIMED_OUT");
+                    sub.setSubmittedAt(deadline);
+                    submissionRepository.save(sub);
                 }
-            });
+            }
+        }
 
-        // Check again after cleanup
+        // Check remaining valid attempts after cleanup
         long validAttempts = submissionRepository.countByQuizIdAndStudentIdAndStatusNot(quizId, studentId, "IN_PROGRESS");
         if (validAttempts >= quiz.getMaxAttempts()) {
             throw new com.schoolsaas.exception.BadRequestException("Maximum attempts reached");
+        }
+
+        // Check if there's still a fresh IN_PROGRESS — reuse it instead of creating a duplicate
+        Optional<QuizSubmission> freshSub = submissionRepository
+                .findFirstByQuizIdAndStudentIdAndStatusOrderByStartedAtDesc(quizId, studentId, "IN_PROGRESS");
+        if (freshSub.isPresent()) {
+            QuizDto dto = mapToDto(quiz);
+            if (quiz.getDurationMinutes() != null && freshSub.get().getStartedAt() != null) {
+                dto.setEndTime(freshSub.get().getStartedAt().plusMinutes(quiz.getDurationMinutes()));
+            }
+            dto.getQuestions().forEach(q -> {
+                q.setCorrectAnswer(null);
+                q.setCorrectAnswers(null);
+            });
+            return dto;
         }
 
         QuizSubmission submission = QuizSubmission.builder()
@@ -245,7 +260,6 @@ public class QuizService {
         submissionRepository.save(submission);
 
         QuizDto dto = mapToDto(quiz);
-        // Enforce time tracking: include deadline timestamp
         if (quiz.getDurationMinutes() != null) {
             dto.setEndTime(now.plusMinutes(quiz.getDurationMinutes()));
         }
@@ -263,8 +277,8 @@ public class QuizService {
         List<QuizQuestion> questions = questionRepository.findByQuizIdOrderByOrderIndexAsc(quizId);
 
         QuizSubmission submission = submissionRepository
-                .findByQuizIdAndStudentIdAndStatus(quizId, studentId, "IN_PROGRESS")
-                .orElseThrow(() -> new com.schoolsaas.exception.BadRequestException("No active submission found"));
+                .findFirstByQuizIdAndStudentIdAndStatusOrderByStartedAtDesc(quizId, studentId, "IN_PROGRESS")
+                .orElseThrow(() -> new com.schoolsaas.exception.BadRequestException("No active submission found. Please start the quiz first."));
 
         // Enforce duration limit
         LocalDateTime now = LocalDateTime.now();
@@ -349,8 +363,15 @@ public class QuizService {
         submission.setStatus("SUBMITTED");
         submissionRepository.save(submission);
 
-        // Award points for quiz completion
-        gamificationService.awardPoints(studentId, quiz.getSchoolId(), 10, "EARNED", "Completed quiz: " + quiz.getTitle(), "QUIZ", quiz.getId());
+        // Award points for quiz completion (use user's UUID, not student's UUID)
+        Student submittingStudent = studentRepository.findById(studentId).orElse(null);
+        if (submittingStudent != null && submittingStudent.getUserId() != null) {
+            try {
+                gamificationService.awardPoints(submittingStudent.getUserId(), quiz.getSchoolId(), 10, "EARNED", "Completed quiz: " + quiz.getTitle(), "QUIZ", quiz.getId());
+            } catch (Exception e) {
+                // Gamification failure should not break quiz submission
+            }
+        }
 
         QuizResultDto result = new QuizResultDto();
         result.setSubmissionId(submission.getId());
