@@ -92,6 +92,14 @@ public class Quiz {
     @Builder.Default
     private Boolean showCorrectAnswers = false;
 
+    @Column(name = "result_visibility_type")
+    @Builder.Default
+    private String resultVisibilityType = "NEVER"; // IMMEDIATELY, AFTER_ALL_SUBMITTED, AFTER_DEADLINE, MANUAL, NEVER
+
+    @Column(name = "results_released")
+    @Builder.Default
+    private Boolean resultsReleased = false;
+
     @Column(name = "term_id")
     private UUID termId;
 

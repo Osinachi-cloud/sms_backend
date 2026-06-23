@@ -17,5 +17,7 @@ public class QuizResultDto {
     private String gradeLetter;
     private String status;
     private Boolean showCorrectAnswers;
+    private Boolean resultsVisible;
+    private String resultsAvailableText;
     private List<QuizAnswerDto> answers;
 }

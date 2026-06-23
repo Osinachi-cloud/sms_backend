@@ -29,6 +29,8 @@ public class QuizDto {
     private String quizType;
     private Boolean isEnabled;
     private Boolean showCorrectAnswers;
+    private String resultVisibilityType;
+    private Boolean resultsReleased;
     private UUID termId;
     private String termName;
     private UUID sessionId;

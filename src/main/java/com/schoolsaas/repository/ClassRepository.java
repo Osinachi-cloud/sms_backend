@@ -33,9 +33,15 @@ public interface ClassRepository extends JpaRepository<SchoolClass, UUID> {
     @Query("SELECT COUNT(c) FROM SchoolClass c WHERE c.schoolId = :schoolId AND c.isActive = true")
     long countActiveBySchoolId(UUID schoolId);
 
+    /**
+     * Prefix search on class name and section.
+     * Uses <code>search%</code> so a B-tree index on the column can be used.
+     * For true substring search (e.g. <code>%search%</code>) add a PostgreSQL
+     * <code>pg_trgm</code> GIN index instead.
+     */
     @Query("SELECT c FROM SchoolClass c WHERE c.schoolId = :schoolId AND c.isActive = true AND " +
-           "(LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(c.section) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(LOWER(c.name) LIKE LOWER(CONCAT(:search, '%')) OR " +
+           "LOWER(c.section) LIKE LOWER(CONCAT(:search, '%')))")
     Page<SchoolClass> searchBySchoolId(UUID schoolId, String search, Pageable pageable);
 
     Page<SchoolClass> findBySchoolId(UUID schoolId, Pageable pageable);

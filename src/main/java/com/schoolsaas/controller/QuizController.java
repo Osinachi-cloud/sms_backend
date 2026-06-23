@@ -96,6 +96,18 @@ public class QuizController {
         return ResponseEntity.ok(quizService.getQuizSubmissions(quizId));
     }
 
+    @GetMapping("/{quizId}/participants")
+    @PreAuthorize("hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<List<com.schoolsaas.dto.quiz.QuizParticipantDto>> getParticipants(
+            @PathVariable UUID schoolId,
+            @PathVariable UUID quizId,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) java.math.BigDecimal minScore,
+            @RequestParam(required = false) java.math.BigDecimal maxScore) {
+        return ResponseEntity.ok(quizService.getQuizParticipants(quizId, search, status, minScore, maxScore));
+    }
+
     @GetMapping("/student/{studentId}/history")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<QuizResultDto>> getStudentHistory(
@@ -108,6 +120,13 @@ public class QuizController {
     public ResponseEntity<QuizDto> toggleEnabled(
             @PathVariable UUID schoolId, @PathVariable UUID quizId) {
         return ResponseEntity.ok(quizService.toggleQuizEnabled(schoolId, quizId));
+    }
+
+    @PostMapping("/{quizId}/release-results")
+    @PreAuthorize("hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<QuizDto> releaseResults(
+            @PathVariable UUID schoolId, @PathVariable UUID quizId) {
+        return ResponseEntity.ok(quizService.releaseQuizResults(schoolId, quizId));
     }
 
     @PostMapping("/{quizId}/add-to-grades")

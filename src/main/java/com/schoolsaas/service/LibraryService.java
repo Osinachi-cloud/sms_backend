@@ -56,7 +56,7 @@ public class LibraryService {
     }
 
     public List<LibraryBookDto> searchBooks(UUID schoolId, String query) {
-        return bookRepository.findBySchoolIdAndTitleContainingIgnoreCaseAndIsActiveTrue(schoolId, query)
+        return bookRepository.findBySchoolIdAndTitleStartingWithIgnoreCaseAndIsActiveTrue(schoolId, query)
                 .stream().map(this::mapToDto).collect(Collectors.toList());
     }
 

@@ -31,10 +31,16 @@ public interface TeacherRepository extends JpaRepository<Teacher, UUID> {
 
     boolean existsBySchoolIdAndEmail(UUID schoolId, String email);
 
+    /**
+     * Prefix search on teacher name, employee ID and email.
+     * Uses <code>search%</code> so a B-tree index on the column can be used.
+     * For true substring search (e.g. <code>%search%</code>) add a PostgreSQL
+     * <code>pg_trgm</code> GIN index instead.
+     */
     @Query("SELECT t FROM Teacher t WHERE t.schoolId = :schoolId AND t.status = 'ACTIVE' AND " +
-           "(LOWER(t.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(t.employeeId) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(t.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(LOWER(t.fullName) LIKE LOWER(CONCAT(:search, '%')) OR " +
+           "LOWER(t.employeeId) LIKE LOWER(CONCAT(:search, '%')) OR " +
+           "LOWER(t.email) LIKE LOWER(CONCAT(:search, '%')))")
     Page<Teacher> searchBySchoolId(UUID schoolId, String search, Pageable pageable);
 
     @Query("SELECT COUNT(t) FROM Teacher t WHERE t.schoolId = :schoolId AND t.status = 'ACTIVE'")

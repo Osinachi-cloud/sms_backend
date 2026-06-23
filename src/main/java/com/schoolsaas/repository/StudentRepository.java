@@ -35,16 +35,27 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.classId = :classId AND s.status = 'ACTIVE'")
     List<Student> findActiveBySchoolIdAndClassId(UUID schoolId, UUID classId);
 
+    /**
+     * Prefix search on student name, admission number and email.
+     * Uses <code>search%</code> so a B-tree index on the column can be used.
+     * For true substring search (e.g. <code>%search%</code>) add a PostgreSQL
+     * <code>pg_trgm</code> GIN index instead.
+     */
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.status = 'ACTIVE' AND " +
-           "(LOWER(s.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(s.admissionNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(LOWER(s.fullName) LIKE LOWER(CONCAT(:search, '%')) OR " +
+           "LOWER(s.admissionNumber) LIKE LOWER(CONCAT(:search, '%')) OR " +
+           "LOWER(s.email) LIKE LOWER(CONCAT(:search, '%')))")
     Page<Student> searchBySchoolId(UUID schoolId, String search, Pageable pageable);
 
+    /**
+     * Prefix search on student name, admission number and email (class-scoped).
+     * Uses <code>search%</code> so a B-tree index on the column can be used.
+     * For true substring search add a PostgreSQL <code>pg_trgm</code> GIN index.
+     */
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.classId = :classId AND s.status = 'ACTIVE' AND " +
-           "(LOWER(s.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(s.admissionNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(LOWER(s.fullName) LIKE LOWER(CONCAT(:search, '%')) OR " +
+           "LOWER(s.admissionNumber) LIKE LOWER(CONCAT(:search, '%')) OR " +
+           "LOWER(s.email) LIKE LOWER(CONCAT(:search, '%')))")
     Page<Student> searchBySchoolIdAndClassId(UUID schoolId, UUID classId, String search, Pageable pageable);
 
     Page<Student> findBySchoolIdAndClassIdAndStatus(UUID schoolId, UUID classId, String status, Pageable pageable);

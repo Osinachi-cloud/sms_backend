@@ -27,8 +27,14 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
     @Query("SELECT s FROM School s WHERE s.status != 'DELETED'")
     Page<School> findAllActive(Pageable pageable);
 
+    /**
+     * Prefix search on school name and code.
+     * Uses <code>search%</code> so a B-tree index on the column can be used.
+     * For true substring search (e.g. <code>%search%</code>) add a PostgreSQL
+     * <code>pg_trgm</code> GIN index instead.
+     */
     @Query("SELECT s FROM School s WHERE s.status = 'ACTIVE' AND " +
-           "(LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(s.code) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(LOWER(s.name) LIKE LOWER(CONCAT(:search, '%')) OR " +
+           "LOWER(s.code) LIKE LOWER(CONCAT(:search, '%')))")
     Page<School> searchByNameOrCode(String search, Pageable pageable);
 }

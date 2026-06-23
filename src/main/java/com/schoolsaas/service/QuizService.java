@@ -54,6 +54,8 @@ public class QuizService {
                 .quizType(dto.getQuizType() != null ? dto.getQuizType() : "QUIZ")
                 .isEnabled(dto.getIsEnabled() != null ? dto.getIsEnabled() : true)
                 .showCorrectAnswers(dto.getShowCorrectAnswers() != null ? dto.getShowCorrectAnswers() : false)
+                .resultVisibilityType(dto.getResultVisibilityType() != null ? dto.getResultVisibilityType() : "NEVER")
+                .resultsReleased(dto.getResultsReleased() != null ? dto.getResultsReleased() : false)
                 .termId(dto.getTermId())
                 .sessionId(dto.getSessionId())
                 .targetClassIds(dto.getTargetClassIds() != null ? dto.getTargetClassIds() : (dto.getClassId() != null ? java.util.List.of(dto.getClassId()) : java.util.List.of()))
@@ -147,6 +149,8 @@ public class QuizService {
         quiz.setQuizType(dto.getQuizType() != null ? dto.getQuizType() : quiz.getQuizType());
         quiz.setIsEnabled(dto.getIsEnabled() != null ? dto.getIsEnabled() : quiz.getIsEnabled());
         quiz.setShowCorrectAnswers(dto.getShowCorrectAnswers() != null ? dto.getShowCorrectAnswers() : quiz.getShowCorrectAnswers());
+        quiz.setResultVisibilityType(dto.getResultVisibilityType() != null ? dto.getResultVisibilityType() : quiz.getResultVisibilityType());
+        quiz.setResultsReleased(dto.getResultsReleased() != null ? dto.getResultsReleased() : quiz.getResultsReleased());
         quiz.setTermId(dto.getTermId());
         quiz.setSessionId(dto.getSessionId());
         quiz = quizRepository.save(quiz);
@@ -373,18 +377,97 @@ public class QuizService {
             }
         }
 
+        boolean resultsVisible = determineIfResultsVisible(quiz);
+        String resultsAvailableText = buildResultsAvailableText(quiz);
+
         QuizResultDto result = new QuizResultDto();
         result.setSubmissionId(submission.getId());
         result.setQuizId(quizId);
         result.setQuizTitle(quiz.getTitle());
-        result.setScore(totalScore);
-        result.setTotalMarks(maxMarks);
-        result.setPercentage(percentage);
-        result.setGradeLetter(gradeLetter);
         result.setStatus(submission.getStatus());
-        result.setShowCorrectAnswers(quiz.getShowCorrectAnswers());
-        result.setAnswers(answerDtos);
+        result.setResultsVisible(resultsVisible);
+        result.setResultsAvailableText(resultsAvailableText);
+
+        if (resultsVisible) {
+            result.setScore(totalScore);
+            result.setTotalMarks(maxMarks);
+            result.setPercentage(percentage);
+            result.setGradeLetter(gradeLetter);
+            result.setShowCorrectAnswers(quiz.getShowCorrectAnswers());
+            result.setAnswers(answerDtos);
+        } else {
+            result.setShowCorrectAnswers(false);
+            result.setAnswers(java.util.List.of());
+        }
         return result;
+    }
+
+    private boolean determineIfResultsVisible(Quiz quiz) {
+        String type = quiz.getResultVisibilityType();
+        if (type == null) type = "NEVER";
+        return switch (type) {
+            case "IMMEDIATELY" -> true;
+            case "AFTER_ALL_SUBMITTED" -> allStudentsSubmitted(quiz);
+            case "AFTER_DEADLINE" -> quiz.getEndTime() != null && LocalDateTime.now().isAfter(quiz.getEndTime());
+            case "MANUAL" -> Boolean.TRUE.equals(quiz.getResultsReleased());
+            case "NEVER" -> false;
+            default -> false;
+        };
+    }
+
+    private String buildResultsAvailableText(Quiz quiz) {
+        String type = quiz.getResultVisibilityType();
+        if (type == null) type = "NEVER";
+        return switch (type) {
+            case "IMMEDIATELY" -> "Results are available immediately.";
+            case "AFTER_ALL_SUBMITTED" -> allStudentsSubmitted(quiz)
+                    ? "Results are now available."
+                    : "Results will be available after all students have submitted.";
+            case "AFTER_DEADLINE" -> quiz.getEndTime() != null
+                    ? "Results will be available after the deadline on " + quiz.getEndTime().toLocalDate() + "."
+                    : "Results will be available after the deadline.";
+            case "MANUAL" -> Boolean.TRUE.equals(quiz.getResultsReleased())
+                    ? "Results have been released by your teacher."
+                    : "Your teacher will release results when ready.";
+            case "NEVER" -> "Results are not available for this assessment.";
+            default -> "Results are not available.";
+        };
+    }
+
+    private boolean allStudentsSubmitted(Quiz quiz) {
+        List<UUID> targetClassIds = quiz.getTargetClassIds();
+        if (targetClassIds == null || targetClassIds.isEmpty()) {
+            if (quiz.getClassId() != null) {
+                targetClassIds = java.util.List.of(quiz.getClassId());
+            } else {
+                return false; // Cannot determine eligible students
+            }
+        }
+
+        long totalEligible = 0;
+        for (UUID classId : targetClassIds) {
+            totalEligible += studentRepository.countBySchoolIdAndClassId(quiz.getSchoolId(), classId);
+        }
+
+        List<QuizSubmission> subs = submissionRepository.findByQuizId(quiz.getId());
+        long uniqueSubmitted = subs.stream()
+                .filter(s -> !"IN_PROGRESS".equals(s.getStatus()))
+                .map(QuizSubmission::getStudentId)
+                .distinct()
+                .count();
+
+        return totalEligible > 0 && uniqueSubmitted >= totalEligible;
+    }
+
+    @Transactional
+    public QuizDto releaseQuizResults(UUID schoolId, UUID quizId) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new com.schoolsaas.exception.ResourceNotFoundException("Quiz", "id", quizId));
+        if (!quiz.getSchoolId().equals(schoolId)) {
+            throw new com.schoolsaas.exception.ResourceNotFoundException("Quiz", "id", quizId);
+        }
+        quiz.setResultsReleased(true);
+        return mapToDto(quizRepository.save(quiz));
     }
 
     private boolean isQuizVisibleToStudent(Quiz quiz, Student student) {
@@ -475,6 +558,8 @@ public class QuizService {
         dto.setQuizType(quiz.getQuizType());
         dto.setIsEnabled(quiz.getIsEnabled());
         dto.setShowCorrectAnswers(quiz.getShowCorrectAnswers());
+        dto.setResultVisibilityType(quiz.getResultVisibilityType());
+        dto.setResultsReleased(quiz.getResultsReleased());
         dto.setTermId(quiz.getTermId());
         if (quiz.getTermId() != null) {
             termRepository.findById(quiz.getTermId()).ifPresent(t -> dto.setTermName(t.getName()));
@@ -518,35 +603,134 @@ public class QuizService {
         return submissionRepository.findByQuizId(quizId);
     }
 
+    public List<QuizParticipantDto> getQuizParticipants(UUID quizId, String search, String statusFilter, BigDecimal minScore, BigDecimal maxScore) {
+        Quiz quiz = quizRepository.findById(quizId).orElse(null);
+        BigDecimal passMark = quiz != null ? quiz.getPassMark() : BigDecimal.ZERO;
+
+        List<QuizSubmission> subs = submissionRepository.findByQuizId(quizId);
+        Set<UUID> studentIds = subs.stream().map(QuizSubmission::getStudentId).collect(Collectors.toSet());
+        if (studentIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Student> students = studentRepository.findAllById(studentIds);
+        Map<UUID, Student> studentMap = students.stream().collect(Collectors.toMap(Student::getId, s -> s));
+
+        Map<UUID, List<QuizSubmission>> grouped = subs.stream().collect(Collectors.groupingBy(QuizSubmission::getStudentId));
+
+        List<QuizParticipantDto> result = new ArrayList<>();
+        for (Map.Entry<UUID, List<QuizSubmission>> entry : grouped.entrySet()) {
+            UUID sid = entry.getKey();
+            Student student = studentMap.get(sid);
+            if (student == null) continue;
+
+            List<QuizSubmission> attempts = entry.getValue().stream()
+                    .sorted(Comparator.comparing(QuizSubmission::getAttemptNumber, Comparator.nullsFirst(Comparator.naturalOrder())))
+                    .collect(Collectors.toList());
+
+            QuizSubmission best = attempts.stream()
+                    .filter(a -> a.getScore() != null)
+                    .max(Comparator.comparing(QuizSubmission::getScore))
+                    .orElse(null);
+
+            boolean passed = best != null && best.getPercentage() != null
+                    && best.getPercentage().compareTo(passMark) >= 0;
+
+            QuizParticipantDto dto = new QuizParticipantDto();
+            dto.setStudentId(sid);
+            dto.setStudentName(student.getFullName());
+            dto.setAdmissionNumber(student.getAdmissionNumber());
+            if (student.getClassId() != null) {
+                classRepository.findById(student.getClassId()).ifPresent(c -> dto.setClassName(c.getName()));
+            }
+            dto.setAttemptCount(attempts.size());
+            dto.setBestScore(best != null ? best.getScore() : null);
+            dto.setBestPercentage(best != null ? best.getPercentage() : null);
+            dto.setBestGradeLetter(best != null ? best.getGradeLetter() : null);
+            dto.setPassed(passed);
+            dto.setAttempts(attempts.stream().map(a -> {
+                QuizParticipantDto.AttemptInfo info = new QuizParticipantDto.AttemptInfo();
+                info.setSubmissionId(a.getId());
+                info.setAttemptNumber(a.getAttemptNumber());
+                info.setScore(a.getScore());
+                info.setTotalMarks(a.getTotalMarks());
+                info.setPercentage(a.getPercentage());
+                info.setGradeLetter(a.getGradeLetter());
+                info.setStatus(a.getStatus());
+                info.setStartedAt(a.getStartedAt());
+                info.setSubmittedAt(a.getSubmittedAt());
+                return info;
+            }).collect(Collectors.toList()));
+
+            result.add(dto);
+        }
+
+        // Apply filters
+        return result.stream().filter(dto -> {
+            if (search != null && !search.isBlank()) {
+                String term = search.toLowerCase();
+                String text = String.join(" ",
+                        String.valueOf(dto.getStudentName()),
+                        String.valueOf(dto.getAdmissionNumber()),
+                        String.valueOf(dto.getClassName())
+                ).toLowerCase();
+                if (!text.contains(term)) return false;
+            }
+            if (statusFilter != null && !statusFilter.isBlank()) {
+                if ("PASSED".equalsIgnoreCase(statusFilter) && !dto.isPassed()) return false;
+                if ("FAILED".equalsIgnoreCase(statusFilter) && dto.isPassed()) return false;
+            }
+            if (minScore != null) {
+                if (dto.getBestScore() == null || dto.getBestScore().compareTo(minScore) < 0) return false;
+            }
+            if (maxScore != null) {
+                if (dto.getBestScore() == null || dto.getBestScore().compareTo(maxScore) > 0) return false;
+            }
+            return true;
+        }).sorted(Comparator.comparing(QuizParticipantDto::getStudentName, String.CASE_INSENSITIVE_ORDER)).collect(Collectors.toList());
+    }
+
     public List<QuizResultDto> getStudentQuizHistory(UUID studentId) {
         List<QuizSubmission> subs = submissionRepository.findByStudentId(studentId);
         return subs.stream().map(sub -> {
             Quiz quiz = quizRepository.findById(sub.getQuizId()).orElse(null);
-            List<QuizAnswer> answers = answerRepository.findBySubmissionId(sub.getId());
+            boolean resultsVisible = quiz != null && determineIfResultsVisible(quiz);
+            String resultsAvailableText = quiz != null ? buildResultsAvailableText(quiz) : null;
+
             QuizResultDto dto = new QuizResultDto();
             dto.setSubmissionId(sub.getId());
             dto.setQuizId(sub.getQuizId());
             dto.setQuizTitle(quiz != null ? quiz.getTitle() : "Unknown");
-            dto.setScore(sub.getScore());
-            dto.setTotalMarks(sub.getTotalMarks());
-            dto.setPercentage(sub.getPercentage());
-            dto.setGradeLetter(sub.getGradeLetter());
             dto.setStatus(sub.getStatus());
-            dto.setAnswers(answers.stream().map(a -> {
-                QuizAnswerDto ad = new QuizAnswerDto();
-                ad.setQuestionId(a.getQuestionId());
-                QuizQuestion q = questionRepository.findById(a.getQuestionId()).orElse(null);
-                ad.setQuestionText(q != null ? q.getQuestionText() : "");
-                ad.setUserAnswer(a.getAnswer());
-                ad.setSelectedOptions(a.getSelectedOptions());
-                ad.setCorrectAnswer(q != null ? q.getCorrectAnswer() : null);
-                ad.setCorrectAnswers(q != null ? q.getCorrectAnswers() : null);
-                ad.setIsCorrect(a.getIsCorrect());
-                ad.setMarksObtained(a.getMarksObtained());
-                ad.setTotalMarks(q != null ? q.getMarks() : BigDecimal.ZERO);
-                ad.setExplanation(q != null ? q.getExplanation() : null);
-                return ad;
-            }).collect(Collectors.toList()));
+            dto.setResultsVisible(resultsVisible);
+            dto.setResultsAvailableText(resultsAvailableText);
+
+            if (resultsVisible) {
+                List<QuizAnswer> answers = answerRepository.findBySubmissionId(sub.getId());
+                dto.setScore(sub.getScore());
+                dto.setTotalMarks(sub.getTotalMarks());
+                dto.setPercentage(sub.getPercentage());
+                dto.setGradeLetter(sub.getGradeLetter());
+                dto.setShowCorrectAnswers(quiz != null ? quiz.getShowCorrectAnswers() : false);
+                dto.setAnswers(answers.stream().map(a -> {
+                    QuizAnswerDto ad = new QuizAnswerDto();
+                    ad.setQuestionId(a.getQuestionId());
+                    QuizQuestion q = questionRepository.findById(a.getQuestionId()).orElse(null);
+                    ad.setQuestionText(q != null ? q.getQuestionText() : "");
+                    ad.setUserAnswer(a.getAnswer());
+                    ad.setSelectedOptions(a.getSelectedOptions());
+                    ad.setCorrectAnswer(q != null ? q.getCorrectAnswer() : null);
+                    ad.setCorrectAnswers(q != null ? q.getCorrectAnswers() : null);
+                    ad.setIsCorrect(a.getIsCorrect());
+                    ad.setMarksObtained(a.getMarksObtained());
+                    ad.setTotalMarks(q != null ? q.getMarks() : BigDecimal.ZERO);
+                    ad.setExplanation(q != null ? q.getExplanation() : null);
+                    return ad;
+                }).collect(Collectors.toList()));
+            } else {
+                dto.setShowCorrectAnswers(false);
+                dto.setAnswers(java.util.List.of());
+            }
             return dto;
         }).collect(Collectors.toList());
     }

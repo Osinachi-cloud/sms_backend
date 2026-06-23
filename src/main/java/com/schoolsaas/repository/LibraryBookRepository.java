@@ -13,5 +13,10 @@ import java.util.UUID;
 public interface LibraryBookRepository extends JpaRepository<LibraryBook, UUID> {
     Page<LibraryBook> findBySchoolIdAndIsActiveTrue(UUID schoolId, Pageable pageable);
     List<LibraryBook> findBySchoolIdAndCategoryIdAndIsActiveTrue(UUID schoolId, UUID categoryId);
-    List<LibraryBook> findBySchoolIdAndTitleContainingIgnoreCaseAndIsActiveTrue(UUID schoolId, String title);
+    /**
+     * Prefix search on book title (case-insensitive).
+     * Uses <code>title%</code> so a B-tree index can be used.
+     * For true substring search add a PostgreSQL <code>pg_trgm</code> GIN index.
+     */
+    List<LibraryBook> findBySchoolIdAndTitleStartingWithIgnoreCaseAndIsActiveTrue(UUID schoolId, String title);
 }
