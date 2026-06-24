@@ -1,6 +1,7 @@
 package com.schoolsaas.controller;
 
 import com.schoolsaas.dto.quiz.*;
+import com.schoolsaas.repository.StudentRepository;
 import com.schoolsaas.security.SecurityUtils;
 import com.schoolsaas.service.QuizService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class QuizController {
 
     private final QuizService quizService;
+    private final StudentRepository studentRepository;
 
     @PostMapping
     @PreAuthorize("hasPermission(#schoolId, 'cms.content.create') or hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
@@ -33,7 +36,8 @@ public class QuizController {
             @PathVariable UUID schoolId,
             @RequestParam(required = false) UUID studentId,
             Pageable pageable) {
-        return ResponseEntity.ok(quizService.listQuizzes(schoolId, studentId, pageable));
+        UUID effectiveStudentId = resolveStudentId(schoolId, studentId);
+        return ResponseEntity.ok(quizService.listQuizzes(schoolId, effectiveStudentId, pageable));
     }
 
     @GetMapping("/{quizId}")
@@ -42,7 +46,8 @@ public class QuizController {
             @PathVariable UUID schoolId,
             @PathVariable UUID quizId,
             @RequestParam(required = false) UUID studentId) {
-        return ResponseEntity.ok(quizService.getQuiz(quizId, studentId));
+        UUID effectiveStudentId = resolveStudentId(schoolId, studentId);
+        return ResponseEntity.ok(quizService.getQuiz(quizId, effectiveStudentId));
     }
 
     @PutMapping("/{quizId}")
@@ -66,27 +71,35 @@ public class QuizController {
     }
 
     @PostMapping("/{quizId}/start")
-    public ResponseEntity<QuizDto> startQuiz(@PathVariable UUID quizId, @RequestBody Map<String, String> body) {
-        String studentIdStr = body != null ? body.get("studentId") : null;
-        if (studentIdStr == null || studentIdStr.isBlank()) {
+    public ResponseEntity<QuizDto> startQuiz(
+            @PathVariable UUID schoolId,
+            @PathVariable UUID quizId,
+            @RequestBody(required = false) Map<String, String> body,
+            @RequestParam(required = false) UUID studentId) {
+        UUID effectiveStudentId = resolveStudentId(schoolId, studentId);
+        if (effectiveStudentId == null && body != null && body.get("studentId") != null) {
+            effectiveStudentId = UUID.fromString(body.get("studentId"));
+        }
+        if (effectiveStudentId == null) {
             throw new IllegalArgumentException("studentId is required");
         }
-        return ResponseEntity.ok(quizService.startQuiz(quizId, UUID.fromString(studentIdStr)));
+        return ResponseEntity.ok(quizService.startQuiz(quizId, effectiveStudentId));
     }
 
     @PostMapping("/{quizId}/submit")
-    public ResponseEntity<QuizResultDto> submitQuiz(@PathVariable UUID quizId, @RequestBody SubmitQuizRequest request) {
-        UUID studentId = request != null ? request.getStudentId() : null;
-        if (studentId == null) {
-            List<Map<String, Object>> answers = request != null ? request.getAnswers() : null;
-            if (answers != null && !answers.isEmpty() && answers.getFirst() != null && answers.getFirst().get("studentId") != null) {
-                studentId = UUID.fromString(answers.getFirst().get("studentId").toString());
-            }
+    public ResponseEntity<QuizResultDto> submitQuiz(
+            @PathVariable UUID schoolId,
+            @PathVariable UUID quizId,
+            @RequestBody(required = false) SubmitQuizRequest request,
+            @RequestParam(required = false) UUID studentId) {
+        UUID effectiveStudentId = resolveStudentId(schoolId, studentId);
+        if (effectiveStudentId == null && request != null && request.getStudentId() != null) {
+            effectiveStudentId = request.getStudentId();
         }
-        if (studentId == null) {
+        if (effectiveStudentId == null) {
             throw new IllegalArgumentException("studentId is required");
         }
-        return ResponseEntity.ok(quizService.submitQuiz(quizId, studentId, request));
+        return ResponseEntity.ok(quizService.submitQuiz(quizId, effectiveStudentId, request));
     }
 
     @GetMapping("/{quizId}/submissions")
@@ -135,5 +148,23 @@ public class QuizController {
             @PathVariable UUID schoolId, @PathVariable UUID quizId) {
         quizService.addQuizScoreToGrade(schoolId, quizId);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Resolves the student ID from the explicit parameter or infers it from the
+     * currently authenticated user if the user is a student in the given school.
+     */
+    private UUID resolveStudentId(UUID schoolId, UUID explicitStudentId) {
+        if (explicitStudentId != null) {
+            return explicitStudentId;
+        }
+        Optional<com.schoolsaas.security.UserPrincipal> userOpt = SecurityUtils.getCurrentUser();
+        if (userOpt.isEmpty()) {
+            return null;
+        }
+        return studentRepository.findByUserId(userOpt.get().getId())
+                .filter(s -> s.getSchoolId().equals(schoolId))
+                .map(com.schoolsaas.model.Student::getId)
+                .orElse(null);
     }
 }

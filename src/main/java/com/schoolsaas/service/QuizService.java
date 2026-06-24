@@ -56,6 +56,7 @@ public class QuizService {
                 .showCorrectAnswers(dto.getShowCorrectAnswers() != null ? dto.getShowCorrectAnswers() : false)
                 .resultVisibilityType(dto.getResultVisibilityType() != null ? dto.getResultVisibilityType() : "NEVER")
                 .resultsReleased(dto.getResultsReleased() != null ? dto.getResultsReleased() : false)
+                .scoreAggregationStrategy(dto.getScoreAggregationStrategy() != null && !dto.getScoreAggregationStrategy().isBlank() ? dto.getScoreAggregationStrategy() : "HIGHEST")
                 .termId(dto.getTermId())
                 .sessionId(dto.getSessionId())
                 .targetClassIds(dto.getTargetClassIds() != null ? dto.getTargetClassIds() : (dto.getClassId() != null ? java.util.List.of(dto.getClassId()) : java.util.List.of()))
@@ -110,6 +111,9 @@ public class QuizService {
             if (student != null && !isQuizVisibleToStudent(quiz, student)) {
                 throw new com.schoolsaas.exception.BadRequestException("You do not have access to this quiz");
             }
+            if (student != null) {
+                return mapToDtoWithStudentInfo(quiz, studentId);
+            }
         }
         return mapToDto(quiz);
     }
@@ -151,6 +155,7 @@ public class QuizService {
         quiz.setShowCorrectAnswers(dto.getShowCorrectAnswers() != null ? dto.getShowCorrectAnswers() : quiz.getShowCorrectAnswers());
         quiz.setResultVisibilityType(dto.getResultVisibilityType() != null ? dto.getResultVisibilityType() : quiz.getResultVisibilityType());
         quiz.setResultsReleased(dto.getResultsReleased() != null ? dto.getResultsReleased() : quiz.getResultsReleased());
+        quiz.setScoreAggregationStrategy(dto.getScoreAggregationStrategy() != null && !dto.getScoreAggregationStrategy().isBlank() ? dto.getScoreAggregationStrategy() : quiz.getScoreAggregationStrategy());
         quiz.setTermId(dto.getTermId());
         quiz.setSessionId(dto.getSessionId());
         quiz = quizRepository.save(quiz);
@@ -227,7 +232,7 @@ public class QuizService {
             if (sub.getStartedAt() != null && quiz.getDurationMinutes() != null) {
                 LocalDateTime deadline = sub.getStartedAt().plusMinutes(quiz.getDurationMinutes());
                 if (now.isAfter(deadline)) {
-                    sub.setStatus("TIMED_OUT");
+                    sub.setStatus("TIME_UP");
                     sub.setSubmittedAt(deadline);
                     submissionRepository.save(sub);
                 }
@@ -244,14 +249,10 @@ public class QuizService {
         Optional<QuizSubmission> freshSub = submissionRepository
                 .findFirstByQuizIdAndStudentIdAndStatusOrderByStartedAtDesc(quizId, studentId, "IN_PROGRESS");
         if (freshSub.isPresent()) {
-            QuizDto dto = mapToDto(quiz);
+            QuizDto dto = mapToDtoWithStudentInfo(quiz, studentId);
             if (quiz.getDurationMinutes() != null && freshSub.get().getStartedAt() != null) {
                 dto.setEndTime(freshSub.get().getStartedAt().plusMinutes(quiz.getDurationMinutes()));
             }
-            dto.getQuestions().forEach(q -> {
-                q.setCorrectAnswer(null);
-                q.setCorrectAnswers(null);
-            });
             return dto;
         }
 
@@ -260,18 +261,14 @@ public class QuizService {
                 .studentId(studentId)
                 .startedAt(now)
                 .attemptNumber((int) validAttempts + 1)
+                .status("IN_PROGRESS")
                 .build();
         submissionRepository.save(submission);
 
-        QuizDto dto = mapToDto(quiz);
+        QuizDto dto = mapToDtoWithStudentInfo(quiz, studentId);
         if (quiz.getDurationMinutes() != null) {
             dto.setEndTime(now.plusMinutes(quiz.getDurationMinutes()));
         }
-        // Don't send correct answers when starting!
-        dto.getQuestions().forEach(q -> {
-            q.setCorrectAnswer(null);
-            q.setCorrectAnswers(null);
-        });
         return dto;
     }
 
@@ -289,7 +286,7 @@ public class QuizService {
         if (quiz.getDurationMinutes() != null && submission.getStartedAt() != null) {
             LocalDateTime deadline = submission.getStartedAt().plusMinutes(quiz.getDurationMinutes());
             if (now.isAfter(deadline)) {
-                submission.setStatus("TIMED_OUT");
+                submission.setStatus("TIME_UP");
                 submission.setSubmittedAt(deadline);
                 submissionRepository.save(submission);
                 throw new com.schoolsaas.exception.BadRequestException("Time limit exceeded. Quiz has been auto-submitted.");
@@ -560,6 +557,7 @@ public class QuizService {
         dto.setShowCorrectAnswers(quiz.getShowCorrectAnswers());
         dto.setResultVisibilityType(quiz.getResultVisibilityType());
         dto.setResultsReleased(quiz.getResultsReleased());
+        dto.setScoreAggregationStrategy(quiz.getScoreAggregationStrategy());
         dto.setTermId(quiz.getTermId());
         if (quiz.getTermId() != null) {
             termRepository.findById(quiz.getTermId()).ifPresent(t -> dto.setTermName(t.getName()));
@@ -588,15 +586,61 @@ public class QuizService {
 
     private QuizDto mapToDtoWithStudentInfo(Quiz quiz, UUID studentId) {
         QuizDto dto = mapToDto(quiz);
-        List<QuizSubmission> subs = submissionRepository.findByQuizIdAndStudentId(quiz.getId(), studentId);
+        // Don't send correct answers to students when browsing
+        dto.getQuestions().forEach(q -> {
+            q.setCorrectAnswer(null);
+            q.setCorrectAnswers(null);
+        });
+        List<QuizSubmission> subs = submissionRepository.findByQuizIdAndStudentId(quiz.getId(), studentId)
+                .stream().filter(s -> !"IN_PROGRESS".equals(s.getStatus())).toList();
         dto.setHasAttempted(!subs.isEmpty());
-        dto.setAttemptsUsed((int) subs.stream().filter(s -> !"IN_PROGRESS".equals(s.getStatus())).count());
-        dto.setBestScore(subs.stream()
-                .filter(s -> s.getScore() != null)
-                .map(QuizSubmission::getScore)
-                .max(BigDecimal::compareTo)
-                .orElse(null));
+        dto.setAttemptsUsed(subs.size());
+        AggregatedScore aggregated = aggregateSubmissions(subs, quiz.getTotalMarks(), quiz.getScoreAggregationStrategy());
+        dto.setBestScore(aggregated.score());
         return dto;
+    }
+
+    public record AggregatedScore(BigDecimal score, BigDecimal totalMarks, BigDecimal percentage, String gradeLetter) {}
+
+    public AggregatedScore aggregateSubmissions(List<QuizSubmission> subs, BigDecimal quizTotalMarks, String strategy) {
+        if (subs == null || subs.isEmpty()) {
+            return new AggregatedScore(null, quizTotalMarks, null, null);
+        }
+        List<QuizSubmission> valid = subs.stream()
+                .filter(s -> s.getScore() != null && s.getTotalMarks() != null)
+                .toList();
+        if (valid.isEmpty()) {
+            return new AggregatedScore(null, quizTotalMarks, null, null);
+        }
+        BigDecimal aggregatedScore;
+        String strategyKey = strategy != null ? strategy : "HIGHEST";
+        switch (strategyKey) {
+            case "LOWEST":
+                aggregatedScore = valid.stream()
+                        .map(QuizSubmission::getScore)
+                        .min(BigDecimal::compareTo)
+                        .orElse(BigDecimal.ZERO);
+                break;
+            case "AVERAGE":
+                BigDecimal sum = valid.stream()
+                        .map(QuizSubmission::getScore)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                aggregatedScore = sum.divide(new BigDecimal(valid.size()), 2, RoundingMode.HALF_UP);
+                break;
+            case "HIGHEST":
+            default:
+                aggregatedScore = valid.stream()
+                        .map(QuizSubmission::getScore)
+                        .max(BigDecimal::compareTo)
+                        .orElse(BigDecimal.ZERO);
+                break;
+        }
+        BigDecimal percentage = quizTotalMarks != null && quizTotalMarks.compareTo(BigDecimal.ZERO) > 0
+                ? aggregatedScore.multiply(new BigDecimal("100")).divide(quizTotalMarks, 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        double p = percentage.doubleValue();
+        String gradeLetter = p >= 70 ? "A" : p >= 60 ? "B" : p >= 50 ? "C" : p >= 45 ? "D" : "F";
+        return new AggregatedScore(aggregatedScore, quizTotalMarks, percentage, gradeLetter);
     }
 
     public List<QuizSubmission> getQuizSubmissions(UUID quizId) {
@@ -628,13 +672,12 @@ public class QuizService {
                     .sorted(Comparator.comparing(QuizSubmission::getAttemptNumber, Comparator.nullsFirst(Comparator.naturalOrder())))
                     .collect(Collectors.toList());
 
-            QuizSubmission best = attempts.stream()
-                    .filter(a -> a.getScore() != null)
-                    .max(Comparator.comparing(QuizSubmission::getScore))
-                    .orElse(null);
+            AggregatedScore aggregated = aggregateSubmissions(
+                    attempts, quiz != null ? quiz.getTotalMarks() : null,
+                    quiz != null ? quiz.getScoreAggregationStrategy() : "HIGHEST");
 
-            boolean passed = best != null && best.getPercentage() != null
-                    && best.getPercentage().compareTo(passMark) >= 0;
+            boolean passed = aggregated.percentage() != null
+                    && aggregated.percentage().compareTo(passMark) >= 0;
 
             QuizParticipantDto dto = new QuizParticipantDto();
             dto.setStudentId(sid);
@@ -644,9 +687,9 @@ public class QuizService {
                 classRepository.findById(student.getClassId()).ifPresent(c -> dto.setClassName(c.getName()));
             }
             dto.setAttemptCount(attempts.size());
-            dto.setBestScore(best != null ? best.getScore() : null);
-            dto.setBestPercentage(best != null ? best.getPercentage() : null);
-            dto.setBestGradeLetter(best != null ? best.getGradeLetter() : null);
+            dto.setBestScore(aggregated.score());
+            dto.setBestPercentage(aggregated.percentage());
+            dto.setBestGradeLetter(aggregated.gradeLetter());
             dto.setPassed(passed);
             dto.setAttempts(attempts.stream().map(a -> {
                 QuizParticipantDto.AttemptInfo info = new QuizParticipantDto.AttemptInfo();
@@ -757,27 +800,42 @@ public class QuizService {
             throw new com.schoolsaas.exception.BadRequestException("Quiz must have subject and term to add to grades");
         }
         List<QuizSubmission> subs = submissionRepository.findByQuizId(quizId);
-        for (QuizSubmission sub : subs) {
-            if (sub.getScore() == null || sub.getTotalMarks() == null) continue;
+        Map<UUID, List<QuizSubmission>> byStudent = subs.stream()
+                .filter(s -> !"IN_PROGRESS".equals(s.getStatus()))
+                .collect(Collectors.groupingBy(QuizSubmission::getStudentId));
+
+        for (Map.Entry<UUID, List<QuizSubmission>> entry : byStudent.entrySet()) {
+            UUID studentId = entry.getKey();
+            AggregatedScore aggregated = aggregateSubmissions(
+                    entry.getValue(), quiz.getTotalMarks(), quiz.getScoreAggregationStrategy());
+            if (aggregated.score() == null) continue;
+
+            BigDecimal pct = aggregated.percentage();
+            String gl = aggregated.gradeLetter();
+
             Optional<Grade> existing = gradeRepository.findByStudentIdAndSubjectIdAndTermIdAndAssessmentType(
-                    sub.getStudentId(), quiz.getSubjectId(), quiz.getTermId(), "QUIZ_" + quizId);
-            if (existing.isPresent()) continue;
-            Grade grade = new Grade();
-            grade.setSchoolId(schoolId);
-            grade.setStudentId(sub.getStudentId());
-            grade.setSubjectId(quiz.getSubjectId());
-            grade.setTermId(quiz.getTermId());
-            grade.setAssessmentType("QUIZ_" + quizId);
-            grade.setScore(sub.getScore());
-            grade.setMaxScore(sub.getTotalMarks());
-            BigDecimal pct = sub.getTotalMarks().compareTo(BigDecimal.ZERO) > 0
-                    ? sub.getScore().multiply(new BigDecimal("100")).divide(sub.getTotalMarks(), 2, RoundingMode.HALF_UP)
-                    : BigDecimal.ZERO;
-            double p = pct.doubleValue();
-            String gl = p >= 70 ? "A" : p >= 60 ? "B" : p >= 50 ? "C" : p >= 45 ? "D" : "F";
-            grade.setGradeLetter(gl);
-            grade.setRemarks("Auto-graded from " + (quiz.getQuizType() != null ? quiz.getQuizType() : "quiz") + ": " + quiz.getTitle());
-            gradeRepository.save(grade);
+                    studentId, quiz.getSubjectId(), quiz.getTermId(), "QUIZ_" + quizId);
+            if (existing.isPresent()) {
+                Grade g = existing.get();
+                g.setScore(aggregated.score());
+                g.setMaxScore(quiz.getTotalMarks());
+                g.setGradeLetter(gl);
+                g.setSessionId(quiz.getSessionId());
+                gradeRepository.save(g);
+            } else {
+                Grade grade = new Grade();
+                grade.setSchoolId(schoolId);
+                grade.setStudentId(studentId);
+                grade.setSubjectId(quiz.getSubjectId());
+                grade.setTermId(quiz.getTermId());
+                grade.setSessionId(quiz.getSessionId());
+                grade.setAssessmentType("QUIZ_" + quizId);
+                grade.setScore(aggregated.score());
+                grade.setMaxScore(quiz.getTotalMarks());
+                grade.setGradeLetter(gl);
+                grade.setRemarks("Auto-graded from " + (quiz.getQuizType() != null ? quiz.getQuizType() : "quiz") + ": " + quiz.getTitle());
+                gradeRepository.save(grade);
+            }
         }
     }
 }

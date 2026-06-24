@@ -100,6 +100,10 @@ public class Quiz {
     @Builder.Default
     private Boolean resultsReleased = false;
 
+    @Column(name = "score_aggregation_strategy")
+    @Builder.Default
+    private String scoreAggregationStrategy = "HIGHEST"; // HIGHEST, LOWEST, AVERAGE
+
     @Column(name = "term_id")
     private UUID termId;
 

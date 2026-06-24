@@ -10,13 +10,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "grades")
+@Table(name = "teacher_assessments")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Grade {
+public class TeacherAssessment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -25,11 +25,20 @@ public class Grade {
     @Column(name = "school_id", nullable = false)
     private UUID schoolId;
 
-    @Column(name = "student_id", nullable = false)
-    private UUID studentId;
+    @Column(name = "teacher_id", nullable = false)
+    private UUID teacherId;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "subject_id")
     private UUID subjectId;
+
+    @Column(name = "class_id")
+    private UUID classId;
 
     @Column(name = "term_id")
     private UUID termId;
@@ -37,22 +46,20 @@ public class Grade {
     @Column(name = "session_id")
     private UUID sessionId;
 
-    @Column(name = "assessment_type")
-    private String assessmentType;
-
-    private BigDecimal score;
-
-    @Column(name = "max_score")
+    @Column(name = "assessment_type", nullable = false)
     @Builder.Default
-    private BigDecimal maxScore = new BigDecimal("100");
+    private String assessmentType = "TEST"; // CA, TEST, EXAM, QUIZ
 
-    @Column(name = "grade_letter")
-    private String gradeLetter;
+    @Column(name = "max_score", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal maxScore = new BigDecimal("100.00");
 
-    private String remarks;
+    @Column(name = "date_conducted")
+    private LocalDateTime dateConducted;
 
-    @Column(name = "entered_by")
-    private UUID enteredBy;
+    @Column(nullable = false)
+    @Builder.Default
+    private String status = "DRAFT"; // DRAFT, PUBLISHED, CLOSED
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -61,16 +68,4 @@ public class Grade {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id", insertable = false, updatable = false)
-    private Student student;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_id", insertable = false, updatable = false)
-    private Subject subject;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "term_id", insertable = false, updatable = false)
-    private Term term;
 }

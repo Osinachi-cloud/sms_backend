@@ -28,4 +28,20 @@ public interface GradeRepository extends JpaRepository<Grade, UUID> {
 
     @Query("SELECT AVG(g.score) FROM Grade g WHERE g.schoolId = :schoolId AND g.termId = :termId")
     Double getAverageScoreByTermId(@Param("schoolId") UUID schoolId, @Param("termId") UUID termId);
+
+    @Query("""
+        SELECT g FROM Grade g
+        WHERE g.schoolId = :schoolId
+        AND (:studentId IS NULL OR g.studentId = :studentId)
+        AND (:subjectId IS NULL OR g.subjectId = :subjectId)
+        AND (:termId IS NULL OR g.termId = :termId)
+        AND (:sessionId IS NULL OR g.sessionId = :sessionId)
+        ORDER BY g.createdAt DESC
+        """)
+    List<Grade> findBySchoolIdAndFilters(
+            @Param("schoolId") UUID schoolId,
+            @Param("studentId") UUID studentId,
+            @Param("subjectId") UUID subjectId,
+            @Param("termId") UUID termId,
+            @Param("sessionId") UUID sessionId);
 }

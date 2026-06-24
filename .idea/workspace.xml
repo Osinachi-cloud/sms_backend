@@ -8,16 +8,12 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/QuizController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/QuizController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizResultDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/quiz/QuizResultDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Grade.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Grade.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Quiz.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Quiz.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/ClassRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/ClassRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/LibraryBookRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/LibraryBookRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/SchoolRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/SchoolRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/StudentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/StudentRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/TeacherRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/TeacherRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/LibraryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/LibraryService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/GradeRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/GradeRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/QuizRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/QuizRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/QuizSubmissionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/QuizSubmissionRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/QuizService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/QuizService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/SearchService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/SearchService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -28,10 +24,16 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="jar://$MAVEN_REPOSITORY$/org/postgresql/postgresql/42.6.2/postgresql-42.6.2.jar!/org/postgresql/core/v3/ConnectionFactoryImpl.class" root0="SKIP_INSPECTION" />
+  </component>
   <component name="KubernetesApiPersistence">{}</component>
   <component name="KubernetesApiProvider">{
   &quot;isMigrated&quot;: true
 }</component>
+  <component name="MavenRunner">
+    <option name="skipTests" value="true" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
@@ -43,6 +45,7 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;Application.sms_backend.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.school-saas-backend [clean].executor&quot;: &quot;Run&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
@@ -113,7 +116,8 @@
       <workItem from="1781215017478" duration="34101000" />
       <workItem from="1781522277119" duration="23748000" />
       <workItem from="1781964417347" duration="2717000" />
-      <workItem from="1782007880474" duration="15106000" />
+      <workItem from="1782007880474" duration="29764000" />
+      <workItem from="1782245512957" duration="13330000" />
     </task>
     <servers />
   </component>

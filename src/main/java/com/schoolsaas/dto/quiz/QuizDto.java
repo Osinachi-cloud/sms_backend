@@ -31,6 +31,7 @@ public class QuizDto {
     private Boolean showCorrectAnswers;
     private String resultVisibilityType;
     private Boolean resultsReleased;
+    private String scoreAggregationStrategy;
     private UUID termId;
     private String termName;
     private UUID sessionId;
