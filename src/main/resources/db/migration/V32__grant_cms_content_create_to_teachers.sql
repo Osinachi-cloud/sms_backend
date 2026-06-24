@@ -16,8 +16,8 @@ VALUES
 ON CONFLICT (key) DO NOTHING;
 
 -- 2) Grant cms.content.create to every TEACHER role
-INSERT INTO role_permissions (role_id, permission_key)
-SELECT r.id, 'cms.content.create'
+INSERT INTO role_permissions (id, role_id, permission_key)
+SELECT gen_random_uuid(), r.id, 'cms.content.create'
 FROM roles r
 WHERE r.name = 'TEACHER'
   AND r.is_active = true
@@ -27,8 +27,8 @@ WHERE r.name = 'TEACHER'
   );
 
 -- 3) Grant cms.content.edit to every TEACHER role
-INSERT INTO role_permissions (role_id, permission_key)
-SELECT r.id, 'cms.content.edit'
+INSERT INTO role_permissions (id, role_id, permission_key)
+SELECT gen_random_uuid(), r.id, 'cms.content.edit'
 FROM roles r
 WHERE r.name = 'TEACHER'
   AND r.is_active = true
@@ -38,8 +38,8 @@ WHERE r.name = 'TEACHER'
   );
 
 -- 4) Grant cms.content.edit.any to every TEACHER role
-INSERT INTO role_permissions (role_id, permission_key)
-SELECT r.id, 'cms.content.edit.any'
+INSERT INTO role_permissions (id, role_id, permission_key)
+SELECT gen_random_uuid(), r.id, 'cms.content.edit.any'
 FROM roles r
 WHERE r.name = 'TEACHER'
   AND r.is_active = true

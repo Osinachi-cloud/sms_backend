@@ -24,8 +24,8 @@ VALUES
 ON CONFLICT (key) DO NOTHING;
 
 -- 3) Grant cms.folder.create to every existing TEACHER role (skip if already granted)
-INSERT INTO role_permissions (role_id, permission_key)
-SELECT r.id, 'cms.folder.create'
+INSERT INTO role_permissions (id, role_id, permission_key)
+SELECT gen_random_uuid(), r.id, 'cms.folder.create'
 FROM roles r
 WHERE r.name = 'TEACHER'
   AND NOT EXISTS (
@@ -34,8 +34,8 @@ WHERE r.name = 'TEACHER'
   );
 
 -- 4) Grant cms.content.delete to every existing TEACHER role (skip if already granted)
-INSERT INTO role_permissions (role_id, permission_key)
-SELECT r.id, 'cms.content.delete'
+INSERT INTO role_permissions (id, role_id, permission_key)
+SELECT gen_random_uuid(), r.id, 'cms.content.delete'
 FROM roles r
 WHERE r.name = 'TEACHER'
   AND NOT EXISTS (
