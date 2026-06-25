@@ -1,5 +1,6 @@
 package com.schoolsaas.model;
 
+import com.schoolsaas.dto.cms.ContentType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -52,7 +53,8 @@ public class ContentItem {
     private String title;
 
     @Column(name = "content_type")
-    private String contentType;
+    @Enumerated(EnumType.STRING)
+    private ContentType contentType;
 
     @Column(name = "rich_text", columnDefinition = "TEXT")
     private String richText;

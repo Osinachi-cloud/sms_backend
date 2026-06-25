@@ -266,7 +266,7 @@ CREATE TABLE IF NOT EXISTS content_items (
     folder_id UUID REFERENCES content_folders(id) ON DELETE SET NULL,
     teacher_id UUID REFERENCES teachers(id),
     title VARCHAR(255) NOT NULL,
-    content_type VARCHAR(50) CHECK (content_type IN ('NOTE', 'ASSIGNMENT', 'VIDEO', 'FILE', 'LINK')),
+    content_type VARCHAR(50) CHECK (content_type IN ('NOTE', 'ASSIGNMENT', 'VIDEO', 'FILE', 'LINK','PDF')),
     rich_text TEXT,
     body TEXT,
     file_urls TEXT[],

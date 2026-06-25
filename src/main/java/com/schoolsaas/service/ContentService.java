@@ -1,6 +1,7 @@
 package com.schoolsaas.service;
 
 import com.schoolsaas.dto.cms.ContentResponse;
+import com.schoolsaas.dto.cms.ContentType;
 import com.schoolsaas.dto.cms.CreateContentRequest;
 import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
@@ -252,7 +253,7 @@ public class ContentService {
                 .sessionId(request.getSessionId())
                 .teacherId(teacher != null ? teacher.getId() : null)
                 .title(request.getTitle())
-                .contentType(request.getContentType())
+                .contentType(ContentType.valueOf(request.getContentType()))
                 .richText(request.getRichText())
                 .fileUrls(request.getFileUrls())
                 .videoLinks(request.getVideoLinks())
@@ -301,7 +302,7 @@ public class ContentService {
             content.setTitle(request.getTitle());
         }
         if (request.getContentType() != null) {
-            content.setContentType(request.getContentType());
+            content.setContentType(ContentType.valueOf(request.getContentType()));
         }
         if (request.getRichText() != null) {
             content.setRichText(request.getRichText());

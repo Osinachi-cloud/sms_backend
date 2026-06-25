@@ -52,7 +52,7 @@ public class ContentResponse {
         return ContentResponse.builder()
                 .id(content.getId())
                 .title(content.getTitle())
-                .contentType(content.getContentType())
+                .contentType(String.valueOf(content.getContentType()))
                 .folderId(content.getFolderId())
                 .folderName(content.getFolder() != null ? content.getFolder().getName() : null)
                 .subjectId(content.getSubjectId())
