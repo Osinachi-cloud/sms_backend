@@ -64,6 +64,7 @@ public class AiTutorService {
         """;
 
     public ChatResponse chat(UUID userId, ChatRequest request) {
+        /* OpenAI implementation commented out for now
         User user = userRepository.findById(userId).orElse(null);
         String userContext = buildUserContext(user, request.getContext());
 
@@ -102,6 +103,11 @@ public class AiTutorService {
                     .error(true)
                     .build();
         }
+        */
+        return ChatResponse.builder()
+                .message("The AI Tutor feature is currently disabled. Please contact your administrator for more information.")
+                .timestamp(System.currentTimeMillis())
+                .build();
     }
 
     private String buildUserContext(User user, Map<String, String> context) {
@@ -128,6 +134,7 @@ public class AiTutorService {
     }
 
     private String callOpenAI(List<Map<String, String>> messages) {
+        /* OpenAI implementation commented out for now
         RestTemplate restTemplate = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
@@ -155,6 +162,8 @@ public class AiTutorService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse OpenAI response", e);
         }
+        */
+        return "AI implementation is disabled.";
     }
 
     public List<String> getSuggestedQuestions(String currentPage) {

@@ -2,6 +2,8 @@ package com.schoolsaas.service;
 
 import com.schoolsaas.dto.attendance.AttendanceSummary;
 import com.schoolsaas.dto.dashboard.DashboardStats;
+import com.schoolsaas.model.StudentSubjectEnrollment;
+import com.schoolsaas.repository.StudentSubjectEnrollmentRepository;
 import com.schoolsaas.dto.dashboard.StudentDashboard;
 import com.schoolsaas.dto.dashboard.TeacherDashboard;
 import com.schoolsaas.dto.grade.GradeResponse;
@@ -30,6 +32,8 @@ public class DashboardService {
     private final AttendanceService attendanceService;
     private final GradeService gradeService;
     private final TeacherClassRepository teacherClassRepository;
+
+    private final StudentSubjectEnrollmentRepository studentSubjectEnrollmentRepository;
 
     public DashboardStats getSchoolDashboardStats(UUID schoolId) {
         long totalStudents = studentRepository.countBySchoolId(schoolId);
@@ -116,6 +120,45 @@ public class DashboardService {
                 .collect(Collectors.toList());
 
         AttendanceSummary attendance = attendanceService.getStudentAttendanceSummary(schoolId, studentId);
+
+        // Ensure all relevant subjects are shown, even if no grades exist
+        // 1. Get subjects from explicit enrollments
+        List<StudentSubjectEnrollment> enrollments = studentSubjectEnrollmentRepository.findBySchoolIdAndStudentId(schoolId, studentId);
+        Set<UUID> subjectIds = enrollments.stream()
+                .map(StudentSubjectEnrollment::getSubjectId)
+                .collect(Collectors.toSet());
+
+        // 2. Get subjects assigned to the student's class (fallback/additional)
+        if (student.getClassId() != null) {
+            List<Subject> classSubjects = subjectRepository.findBySchoolIdAndClassId(schoolId, student.getClassId());
+            for (Subject s : classSubjects) {
+                subjectIds.add(s.getId());
+            }
+        }
+
+        Map<UUID, Subject> schoolSubjects = subjectRepository.findBySchoolId(schoolId)
+                .stream().collect(Collectors.toMap(Subject::getId, s -> s));
+
+        // Use a Set of subject IDs already added from grades to avoid duplicates
+        Set<UUID> addedSubjectIds = new HashSet<>(latestGradesBySubject.keySet());
+
+        for (UUID subId : subjectIds) {
+            if (!addedSubjectIds.contains(subId)) {
+                Subject subj = schoolSubjects.get(subId);
+                if (subj != null) {
+                    subjects.add(StudentDashboard.SubjectWithGrade.builder()
+                            .subjectId(subj.getId().toString())
+                            .subjectName(subj.getName())
+                            .subjectCode(subj.getCode())
+                            .latestScore(null)
+                            .maxScore(BigDecimal.valueOf(100))
+                            .gradeLetter(null)
+                            .termName("Current Term")
+                            .build());
+                    addedSubjectIds.add(subId);
+                }
+            }
+        }
 
         StudentDashboard.FeeStatus feeStatus = StudentDashboard.FeeStatus.builder()
                 .totalDue(BigDecimal.ZERO)

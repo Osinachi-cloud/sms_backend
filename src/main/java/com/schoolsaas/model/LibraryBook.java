@@ -72,6 +72,9 @@ public class LibraryBook {
 
     private String[] tags;
 
+    @Column(name = "audience_roles")
+    private String[] audienceRoles;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     @Builder.Default

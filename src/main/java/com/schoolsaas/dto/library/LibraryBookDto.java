@@ -24,6 +24,7 @@ public class LibraryBookDto {
     private Integer availableCopies;
     private Boolean isDigital;
     private String[] tags;
+    private String[] audienceRoles;
     private Map<String, Object> metadata;
     private LocalDateTime createdAt;
 }

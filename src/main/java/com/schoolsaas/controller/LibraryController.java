@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class LibraryController {
     private final LibraryService libraryService;
 
     @PostMapping("/books")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'LIBRARIAN') or hasPermission(#schoolId, 'library.books.manage')")
     public ResponseEntity<LibraryBookDto> addBook(@PathVariable UUID schoolId, @RequestBody LibraryBookDto dto) {
         return ResponseEntity.ok(libraryService.addBook(schoolId, dto));
     }
@@ -43,5 +45,12 @@ public class LibraryController {
     @PostMapping("/borrowals/{borrowalId}/return")
     public ResponseEntity<BookBorrowal> returnBook(@PathVariable UUID borrowalId) {
         return ResponseEntity.ok(libraryService.returnBook(borrowalId));
+    }
+
+    @DeleteMapping("/books/{bookId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'LIBRARIAN') or hasPermission(#schoolId, 'library.books.manage')")
+    public ResponseEntity<Void> deleteBook(@PathVariable UUID schoolId, @PathVariable UUID bookId) {
+        libraryService.deleteBook(schoolId, bookId);
+        return ResponseEntity.ok().build();
     }
 }
