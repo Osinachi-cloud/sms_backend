@@ -45,12 +45,17 @@ public class CustomUserDetailsService implements UserDetailsService {
     private UserPrincipal buildUserPrincipal(User user, UUID schoolId) {
         Set<String> permissions = new HashSet<>();
         UUID roleId = null;
+        String schoolRoleName = null;
 
         if (schoolId != null && !user.isPlatformAdmin()) {
             Optional<UserSchool> userSchool = userSchoolRepository.findByUserIdAndSchoolId(user.getId(), schoolId);
             if (userSchool.isPresent() && userSchool.get().getRoleId() != null) {
-                roleId = userSchool.get().getRoleId();
+                UserSchool us = userSchool.get();
+                roleId = us.getRoleId();
                 permissions = rolePermissionRepository.findPermissionKeysByRoleId(roleId);
+                if (us.getRole() != null) {
+                    schoolRoleName = us.getRole().getName();
+                }
             }
             // Load temporary permissions granted by super admin
             List<String> tempPermissions = temporaryUserPermissionRepository
@@ -69,6 +74,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .platformRole(user.getPlatformRole())
                 .currentSchoolId(schoolId)
                 .currentRoleId(roleId)
+                .schoolRole(schoolRoleName)
                 .permissions(permissions)
                 .active(user.getIsActive())
                 .build();

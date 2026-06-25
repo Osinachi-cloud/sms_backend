@@ -21,6 +21,7 @@ public class UserPrincipal implements UserDetails {
     private String platformRole;
     private UUID currentSchoolId;
     private UUID currentRoleId;
+    private String schoolRole;
     private Set<String> permissions;
     private boolean active;
 
@@ -30,6 +31,10 @@ public class UserPrincipal implements UserDetails {
 
         if (platformRole != null) {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + platformRole));
+        }
+
+        if (schoolRole != null) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + schoolRole));
         }
 
         if (permissions != null) {

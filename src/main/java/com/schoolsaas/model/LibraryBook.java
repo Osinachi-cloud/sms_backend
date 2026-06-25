@@ -66,10 +66,6 @@ public class LibraryBook {
     @Builder.Default
     private Boolean isDigital = true;
 
-    @Column(name = "is_active")
-    @Builder.Default
-    private Boolean isActive = true;
-
     private String[] tags;
 
     @Column(name = "audience_roles")

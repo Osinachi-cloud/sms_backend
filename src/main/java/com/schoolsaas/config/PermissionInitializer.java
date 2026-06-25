@@ -112,7 +112,10 @@ public class PermissionInitializer {
                 Permission.builder().key("term.update").category("ACADEMIC").description("Update terms").build(),
                 Permission.builder().key("subject.read").category("ACADEMIC").description("View subjects").build(),
                 Permission.builder().key("subject.create").category("ACADEMIC").description("Create subjects").build(),
-                Permission.builder().key("subject.update").category("ACADEMIC").description("Update subjects").build()
+                Permission.builder().key("subject.update").category("ACADEMIC").description("Update subjects").build(),
+                // Library
+                Permission.builder().key("library.books.read").category("LIBRARY").description("View library books").build(),
+                Permission.builder().key("library.books.manage").category("LIBRARY").description("Add/Edit/Delete library books").build()
         );
 
         permissionRepository.saveAll(permissions);

@@ -501,7 +501,6 @@ public class DataSeeder implements CommandLineRunner {
         book.setTotalCopies(copies);
         book.setAvailableCopies(copies);
         book.setIsDigital(true);
-        book.setIsActive(true);
         return libraryBookRepository.save(book);
     }
 

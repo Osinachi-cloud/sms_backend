@@ -26,5 +26,6 @@ public class LibraryBookDto {
     private String[] tags;
     private String[] audienceRoles;
     private Map<String, Object> metadata;
+    private UUID createdBy;
     private LocalDateTime createdAt;
 }

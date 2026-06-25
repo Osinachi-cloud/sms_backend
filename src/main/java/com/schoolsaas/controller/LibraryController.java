@@ -22,7 +22,7 @@ public class LibraryController {
     private final LibraryService libraryService;
 
     @PostMapping("/books")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'LIBRARIAN') or hasPermission(#schoolId, 'library.books.manage')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'LIBRARIAN', 'SCHOOL_ADMIN') or hasPermission(#schoolId, 'library.books.manage')")
     public ResponseEntity<LibraryBookDto> addBook(@PathVariable UUID schoolId, @RequestBody LibraryBookDto dto) {
         return ResponseEntity.ok(libraryService.addBook(schoolId, dto));
     }
@@ -48,7 +48,7 @@ public class LibraryController {
     }
 
     @DeleteMapping("/books/{bookId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'LIBRARIAN') or hasPermission(#schoolId, 'library.books.manage')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER', 'LIBRARIAN', 'SCHOOL_ADMIN') or hasPermission(#schoolId, 'library.books.manage')")
     public ResponseEntity<Void> deleteBook(@PathVariable UUID schoolId, @PathVariable UUID bookId) {
         libraryService.deleteBook(schoolId, bookId);
         return ResponseEntity.ok().build();

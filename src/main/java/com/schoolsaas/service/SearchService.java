@@ -37,7 +37,7 @@ public class SearchService {
         }
 
         // Search library books
-        libraryBookRepository.findBySchoolIdAndTitleStartingWithIgnoreCaseAndIsActiveTrue(schoolId, query).forEach(book -> {
+        libraryBookRepository.findBySchoolIdAndTitleStartingWithIgnoreCase(schoolId, query).forEach(book -> {
             Map<String, Object> r = new HashMap<>();
             r.put("type", "BOOK");
             r.put("id", book.getId());

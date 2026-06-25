@@ -16,11 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,8 +24,8 @@ import java.util.UUID;
 @RequestMapping("/api/schools/{schoolId}/cms")
 @RequiredArgsConstructor
 public class ContentController {
-
     private final ContentService contentService;
+    private final FileUploadController fileUploadController;
 
     @GetMapping("/folders")
     @PreAuthorize("isAuthenticated()")
@@ -179,28 +174,7 @@ public class ContentController {
     public ResponseEntity<Map<String, String>> uploadFile(
             @PathVariable UUID schoolId,
             @RequestParam("file") MultipartFile file) throws IOException {
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || originalFilename.isBlank()) {
-            throw new IllegalArgumentException("File name is required");
-        }
-
-        // Sanitize filename
-        String safeName = originalFilename.replaceAll("[^a-zA-Z0-9.-]", "_");
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        String fileName = timestamp + "_" + safeName;
-
-        // Store in uploads directory
-        Path uploadPath = Paths.get("uploads", schoolId.toString(), "cms");
-        Files.createDirectories(uploadPath);
-        Path filePath = uploadPath.resolve(fileName);
-        Files.copy(file.getInputStream(), filePath);
-
-        // Return relative URL
-        String fileUrl = "/uploads/" + schoolId + "/cms/" + fileName;
-        return ResponseEntity.ok(Map.of(
-            "url", fileUrl,
-            "name", originalFilename,
-            "fullUrl", fileUrl
-        ));
+        
+        return fileUploadController.uploadFile(schoolId, file, "cms");
     }
 }

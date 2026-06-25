@@ -1,12 +1,15 @@
 package com.schoolsaas.service;
 
+import com.schoolsaas.exception.ResourceNotFoundException;
 import com.schoolsaas.dto.library.LibraryBookDto;
 import com.schoolsaas.model.BookBorrowal;
 import com.schoolsaas.model.LibraryBook;
 import com.schoolsaas.model.User;
 import com.schoolsaas.repository.*;
 import com.schoolsaas.security.SecurityUtils;
+import com.schoolsaas.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LibraryService {
@@ -32,6 +36,7 @@ public class LibraryService {
 
     @Transactional
     public LibraryBookDto addBook(UUID schoolId, LibraryBookDto dto) {
+        log.info("Adding new book: {} to school: {}", dto.getTitle(), schoolId);
         LibraryBook book = LibraryBook.builder()
                 .schoolId(schoolId)
                 .categoryId(dto.getCategoryId())
@@ -57,64 +62,103 @@ public class LibraryService {
     }
 
     public Page<LibraryBookDto> listBooks(UUID schoolId, Pageable pageable) {
-        Page<LibraryBook> books = bookRepository.findBySchoolIdAndIsActiveTrue(schoolId, pageable);
+        Page<LibraryBook> books = bookRepository.findBySchoolId(schoolId, pageable);
+        log.info("Found {} books in repository for school {}", books.getTotalElements(), schoolId);
         
-        // Filter based on role if it's not an admin
-        UUID currentUserId = SecurityUtils.getCurrentUserId();
-        if (currentUserId == null) return books.map(this::mapToDto);
-
-        User user = userRepository.findById(currentUserId).orElse(null);
-        if (user == null) return books.map(this::mapToDto);
-
-        UUID currentSchoolId = SecurityUtils.getCurrentSchoolId();
-        if (currentSchoolId == null) return books.map(this::mapToDto);
-
-        String role = userSchoolRepository.findByUserIdAndSchoolId(currentUserId, currentSchoolId)
-                .map(us -> us.getRole() != null ? us.getRole().getName() : "")
-                .orElse("");
-
-        if (role.equals("GENERAL_ADMIN") || role.equals("SCHOOL_ADMIN") || SecurityUtils.isPlatformAdmin()) {
+        // Get current user and their role in THIS school
+        UserPrincipal principal = SecurityUtils.getCurrentUser().orElse(null);
+        if (principal == null) {
+            log.warn("No authenticated user found while listing books");
             return books.map(this::mapToDto);
         }
 
+        if (principal.isPlatformAdmin()) {
+            log.info("User {} is platform admin, bypassing audience filter", principal.getId());
+            return books.map(this::mapToDto);
+        }
+
+        // Check if the user's current school matches the requested school
+        String role;
+        if (schoolId.equals(principal.getCurrentSchoolId())) {
+            role = principal.getSchoolRole();
+            log.info("Using schoolRole from principal: {}", role);
+        } else {
+            // If they are accessing another school's library, we need to check their role there
+            role = userSchoolRepository.findByUserIdAndSchoolId(principal.getId(), schoolId)
+                    .map(us -> us.getRole() != null ? us.getRole().getName() : "")
+                    .orElse("");
+            log.info("Fetched schoolRole from DB for user {} and school {}: {}", principal.getId(), schoolId, role);
+        }
+
+        if (role == null) role = "";
+
+        if (isStaffRole(role)) {
+            log.info("User role {} is a staff role, bypassing audience filter", role);
+            return books.map(this::mapToDto);
+        }
+
+        String finalRole = role;
         List<LibraryBookDto> filtered = books.getContent().stream()
-                .filter(b -> isVisibleToRole(b, role))
+                .filter(b -> isVisibleToRole(b, finalRole))
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
 
-        return new PageImpl<>(filtered, pageable, filtered.size());
+        log.info("Filtered {} active books to {} based on role {}", books.getNumberOfElements(), filtered.size(), role);
+
+        return new PageImpl<>(filtered, pageable, books.getTotalElements());
+    }
+
+    private boolean isStaffRole(String role) {
+        if (role == null) return false;
+        String upperRole = role.toUpperCase();
+        return upperRole.equals("GENERAL_ADMIN") || 
+               upperRole.equals("SCHOOL_ADMIN") || 
+               upperRole.equals("ADMIN") || 
+               upperRole.equals("TEACHER") || 
+               upperRole.equals("LIBRARIAN");
     }
 
     private boolean isVisibleToRole(LibraryBook book, String role) {
         if (book.getAudienceRoles() == null || book.getAudienceRoles().length == 0) {
             return true; // Visible to everyone if no audience specified
         }
-        return Arrays.asList(book.getAudienceRoles()).contains(role);
+        if (role == null || role.isEmpty()) return false;
+        
+        String upperRole = role.toUpperCase();
+        return Arrays.stream(book.getAudienceRoles())
+                .anyMatch(r -> r != null && r.toUpperCase().equals(upperRole));
     }
 
     public List<LibraryBookDto> searchBooks(UUID schoolId, String query) {
-        List<LibraryBook> books = bookRepository.findBySchoolIdAndTitleStartingWithIgnoreCaseAndIsActiveTrue(schoolId, query);
+        List<LibraryBook> books = bookRepository.searchBySchoolId(schoolId, query);
+        log.info("Found {} books matching query '{}' in school {}", books.size(), query, schoolId);
         
-        // Filter based on role if it's not an admin
-        UUID currentUserId = SecurityUtils.getCurrentUserId();
-        if (currentUserId == null) return books.stream().map(this::mapToDto).collect(Collectors.toList());
+        // Get current user and their role in THIS school
+        UserPrincipal principal = SecurityUtils.getCurrentUser().orElse(null);
+        if (principal == null) return books.stream().map(this::mapToDto).collect(Collectors.toList());
 
-        User user = userRepository.findById(currentUserId).orElse(null);
-        if (user == null) return books.stream().map(this::mapToDto).collect(Collectors.toList());
-
-        UUID currentSchoolId = SecurityUtils.getCurrentSchoolId();
-        if (currentSchoolId == null) return books.stream().map(this::mapToDto).collect(Collectors.toList());
-
-        String role = userSchoolRepository.findByUserIdAndSchoolId(currentUserId, currentSchoolId)
-                .map(us -> us.getRole() != null ? us.getRole().getName() : "")
-                .orElse("");
-
-        if (role.equals("GENERAL_ADMIN") || role.equals("SCHOOL_ADMIN") || SecurityUtils.isPlatformAdmin()) {
+        if (principal.isPlatformAdmin()) {
             return books.stream().map(this::mapToDto).collect(Collectors.toList());
         }
 
+        String role;
+        if (schoolId.equals(principal.getCurrentSchoolId())) {
+            role = principal.getSchoolRole();
+        } else {
+            role = userSchoolRepository.findByUserIdAndSchoolId(principal.getId(), schoolId)
+                    .map(us -> us.getRole() != null ? us.getRole().getName() : "")
+                    .orElse("");
+        }
+
+        if (role == null) role = "";
+
+        if (isStaffRole(role)) {
+            return books.stream().map(this::mapToDto).collect(Collectors.toList());
+        }
+
+        String finalRole = role;
         return books.stream()
-                .filter(b -> isVisibleToRole(b, role))
+                .filter(b -> isVisibleToRole(b, finalRole))
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
@@ -153,12 +197,27 @@ public class LibraryService {
 
     public void deleteBook(UUID schoolId, UUID bookId) {
         LibraryBook book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new RuntimeException("Book not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Book", "id", bookId));
+        
         if (!book.getSchoolId().equals(schoolId)) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException("Unauthorized: Book does not belong to this school");
         }
-        book.setIsActive(false);
-        bookRepository.save(book);
+
+        UUID currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isPlatformAdmin = SecurityUtils.isPlatformAdmin();
+        
+        String role = userSchoolRepository.findByUserIdAndSchoolId(currentUserId, schoolId)
+                .map(us -> us.getRole() != null ? us.getRole().getName() : "")
+                .orElse("");
+        
+        boolean isSchoolAdmin = role.equals("SCHOOL_ADMIN") || role.equals("GENERAL_ADMIN");
+        boolean isCreator = book.getCreatedBy() != null && book.getCreatedBy().equals(currentUserId);
+
+        if (!isPlatformAdmin && !isSchoolAdmin && !isCreator) {
+            throw new RuntimeException("Unauthorized: You can only delete your own books");
+        }
+
+        bookRepository.delete(book);
     }
 
     private LibraryBookDto mapToDto(LibraryBook book) {
@@ -183,6 +242,7 @@ public class LibraryService {
         dto.setTags(book.getTags());
         dto.setAudienceRoles(book.getAudienceRoles());
         dto.setMetadata(book.getMetadata());
+        dto.setCreatedBy(book.getCreatedBy());
         dto.setCreatedAt(book.getCreatedAt());
         return dto;
     }
