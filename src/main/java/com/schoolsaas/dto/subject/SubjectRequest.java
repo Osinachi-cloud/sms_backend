@@ -16,4 +16,5 @@ public class SubjectRequest {
     private BigDecimal cost;
     private String createdByType;
     private List<java.util.UUID> classIds;
+    private java.util.UUID gradingSchemeId;
 }

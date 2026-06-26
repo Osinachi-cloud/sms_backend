@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -30,4 +31,10 @@ public interface QuizRepository extends JpaRepository<Quiz, UUID> {
             @Param("subjectId") UUID subjectId,
             @Param("termId") UUID termId,
             @Param("sessionId") UUID sessionId);
+
+    List<Quiz> findAllBySchoolIdAndClassIdAndSubjectIdAndCreatedByAndQuizType(UUID schoolId, UUID classId, UUID subjectId, UUID teacherId, String quizType);
+
+    Optional<Quiz> findBySchoolIdAndClassIdAndSubjectIdAndQuizTypeAndIsSelectedForGradeTrue(UUID schoolId, UUID classId, UUID subjectId, String quizType);
+
+    List<Quiz> findBySchoolIdAndSubjectIdAndQuizTypeAndIsSelectedForGradeTrue(UUID schoolId, UUID subjectId, String quizType);
 }

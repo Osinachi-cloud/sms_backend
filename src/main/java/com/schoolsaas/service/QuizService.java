@@ -33,18 +33,150 @@ public class QuizService {
     private final GradeRepository gradeRepository;
     private final NotificationService notificationService;
     private final GamificationService gamificationService;
+    private final GradingSchemeService gradingSchemeService;
+
+//    @Transactional
+    private final QuizSelectionHistoryRepository selectionHistoryRepository;
+    private final QuizSelectionPointerRepository selectionPointerRepository;
 
     @Transactional
+    public void selectQuizForGrade(UUID schoolId, UUID teacherId, UUID classId, UUID subjectId, String componentType, UUID quizId) {
+        // Find existing selection for this type
+        Optional<Quiz> currentlySelected = quizRepository.findBySchoolIdAndClassIdAndSubjectIdAndQuizTypeAndIsSelectedForGradeTrue(
+                schoolId, classId, subjectId, componentType.toUpperCase());
+
+        currentlySelected.ifPresent(q -> {
+            q.setIsSelectedForGrade(false);
+            quizRepository.save(q);
+        });
+
+        if (quizId != null) {
+            Quiz quiz = quizRepository.findById(quizId)
+                    .orElseThrow(() -> new RuntimeException("Quiz not found"));
+            if (!quiz.getSchoolId().equals(schoolId)) throw new RuntimeException("Unauthorized");
+            if (!quiz.getCreatedBy().equals(teacherId)) throw new RuntimeException("Teacher doesn't own this quiz");
+            
+            quiz.setIsSelectedForGrade(true);
+            quiz.setSelectedAt(LocalDateTime.now());
+            quizRepository.save(quiz);
+        }
+
+        saveSnapshot(teacherId, subjectId, classId);
+    }
+
+    private void saveSnapshot(UUID teacherId, UUID subjectId, UUID classId) {
+        // Get all currently selected quizzes for this combo
+        List<Quiz> selectedQuizzes = quizRepository.findAll().stream() // Not efficient, but for brevity or use custom query
+                .filter(q -> q.getCreatedBy().equals(teacherId) && q.getClassId().equals(classId) && q.getSubjectId().equals(subjectId) && Boolean.TRUE.equals(q.getIsSelectedForGrade()))
+                .toList();
+
+        List<Map<String, String>> snapshot = selectedQuizzes.stream()
+                .map(q -> Map.of("component_type", q.getQuizType(), "quiz_id", q.getId().toString()))
+                .toList();
+
+        // Manage history and pointer
+        QuizSelectionPointer pointer = selectionPointerRepository.findByTeacherIdAndSubjectIdAndClassId(teacherId, subjectId, classId)
+                .orElse(QuizSelectionPointer.builder()
+                        .teacherId(teacherId)
+                        .subjectId(subjectId)
+                        .classId(classId)
+                        .currentIndex(-1)
+                        .build());
+
+        // Delete any forward history if we were in undo state
+        List<QuizSelectionHistory> history = selectionHistoryRepository.findAllByTeacherIdAndSubjectIdAndClassIdOrderByCreatedAtAsc(teacherId, subjectId, classId);
+        if (pointer.getCurrentIndex() < history.size() - 1) {
+            for (int i = history.size() - 1; i > pointer.getCurrentIndex(); i--) {
+                selectionHistoryRepository.delete(history.get(i));
+            }
+        }
+
+        // Add new snapshot
+        QuizSelectionHistory newHistory = QuizSelectionHistory.builder()
+                .teacherId(teacherId)
+                .subjectId(subjectId)
+                .classId(classId)
+                .snapshot(snapshot)
+                .build();
+        selectionHistoryRepository.save(newHistory);
+
+        // Update pointer
+        pointer.setCurrentIndex(pointer.getCurrentIndex() + 1);
+        
+        // Cap history at 20
+        history = selectionHistoryRepository.findAllByTeacherIdAndSubjectIdAndClassIdOrderByCreatedAtAsc(teacherId, subjectId, classId);
+        if (history.size() > 20) {
+            selectionHistoryRepository.delete(history.get(0));
+            pointer.setCurrentIndex(pointer.getCurrentIndex() - 1);
+        }
+        
+        selectionPointerRepository.save(pointer);
+    }
+
+    @Transactional
+    public void undoSelection(UUID teacherId, UUID subjectId, UUID classId) {
+        QuizSelectionPointer pointer = selectionPointerRepository.findByTeacherIdAndSubjectIdAndClassId(teacherId, subjectId, classId)
+                .orElseThrow(() -> new RuntimeException("No history found"));
+
+        if (pointer.getCurrentIndex() <= 0) return; // Cannot undo further
+
+        pointer.setCurrentIndex(pointer.getCurrentIndex() - 1);
+        restoreFromHistory(teacherId, subjectId, classId, pointer.getCurrentIndex());
+        selectionPointerRepository.save(pointer);
+    }
+
+    @Transactional
+    public void redoSelection(UUID teacherId, UUID subjectId, UUID classId) {
+        QuizSelectionPointer pointer = selectionPointerRepository.findByTeacherIdAndSubjectIdAndClassId(teacherId, subjectId, classId)
+                .orElseThrow(() -> new RuntimeException("No history found"));
+
+        List<QuizSelectionHistory> history = selectionHistoryRepository.findAllByTeacherIdAndSubjectIdAndClassIdOrderByCreatedAtAsc(teacherId, subjectId, classId);
+        if (pointer.getCurrentIndex() >= history.size() - 1) return; // Cannot redo further
+
+        pointer.setCurrentIndex(pointer.getCurrentIndex() + 1);
+        restoreFromHistory(teacherId, subjectId, classId, pointer.getCurrentIndex());
+        selectionPointerRepository.save(pointer);
+    }
+
+    private void restoreFromHistory(UUID teacherId, UUID subjectId, UUID classId, int index) {
+        List<QuizSelectionHistory> history = selectionHistoryRepository.findAllByTeacherIdAndSubjectIdAndClassIdOrderByCreatedAtAsc(teacherId, subjectId, classId);
+        QuizSelectionHistory target = history.get(index);
+        
+        // Reset all current selections for this combo
+        List<Quiz> currentSelected = quizRepository.findAll().stream()
+                .filter(q -> q.getCreatedBy().equals(teacherId) && q.getClassId().equals(classId) && q.getSubjectId().equals(subjectId) && Boolean.TRUE.equals(q.getIsSelectedForGrade()))
+                .toList();
+        currentSelected.forEach(q -> q.setIsSelectedForGrade(false));
+        quizRepository.saveAll(currentSelected);
+
+        // Apply snapshot
+        List<Map<String, String>> snapshot = (List<Map<String, String>>) target.getSnapshot();
+        for (Map<String, String> item : snapshot) {
+            UUID quizId = UUID.fromString(item.get("quiz_id"));
+            quizRepository.findById(quizId).ifPresent(q -> {
+                q.setIsSelectedForGrade(true);
+                quizRepository.save(q);
+            });
+        }
+    }
+
     public QuizDto createQuiz(UUID schoolId, QuizDto dto) {
         UUID currentUserId = SecurityUtils.getCurrentUser().map(UserPrincipal::getId).orElse(null);
+        // Resolve total marks from the subject's grading scheme based on quiz type
+        BigDecimal resolvedTotalMarks = resolveTotalMarksFromScheme(schoolId, dto.getSubjectId(), dto.getQuizType());
+        List<UUID> targetClassIds = dto.getTargetClassIds() != null ? dto.getTargetClassIds() : (dto.getClassId() != null ? java.util.List.of(dto.getClassId()) : java.util.List.of());
+        UUID effectiveClassId = dto.getClassId();
+        if (effectiveClassId == null && !targetClassIds.isEmpty()) {
+            effectiveClassId = targetClassIds.get(0);
+        }
         Quiz quiz = Quiz.builder()
                 .schoolId(schoolId)
                 .title(dto.getTitle())
                 .description(dto.getDescription())
                 .subjectId(dto.getSubjectId())
-                .classId(dto.getClassId())
+                .classId(effectiveClassId)
                 .durationMinutes(dto.getDurationMinutes() != null ? dto.getDurationMinutes() : 30)
-                .totalMarks(dto.getTotalMarks() != null ? dto.getTotalMarks() : new BigDecimal("100.00"))
+                .totalMarks(resolvedTotalMarks)
                 .passMark(dto.getPassMark() != null ? dto.getPassMark() : new BigDecimal("40.00"))
                 .shuffleQuestions(Boolean.TRUE.equals(dto.getShuffleQuestions()))
                 .showResultsImmediately(dto.getShowResultsImmediately() != null ? dto.getShowResultsImmediately() : true)
@@ -59,7 +191,7 @@ public class QuizService {
                 .scoreAggregationStrategy(dto.getScoreAggregationStrategy() != null && !dto.getScoreAggregationStrategy().isBlank() ? dto.getScoreAggregationStrategy() : "HIGHEST")
                 .termId(dto.getTermId())
                 .sessionId(dto.getSessionId())
-                .targetClassIds(dto.getTargetClassIds() != null ? dto.getTargetClassIds() : (dto.getClassId() != null ? java.util.List.of(dto.getClassId()) : java.util.List.of()))
+                .targetClassIds(targetClassIds)
                 .createdBy(currentUserId)
                 .build();
         quiz = quizRepository.save(quiz);
@@ -141,8 +273,19 @@ public class QuizService {
         } else if (dto.getClassId() != null) {
             quiz.setTargetClassIds(java.util.List.of(dto.getClassId()));
         }
+        // Ensure classId is populated from targetClassIds if still null
+        if (quiz.getClassId() == null && quiz.getTargetClassIds() != null && !quiz.getTargetClassIds().isEmpty()) {
+            quiz.setClassId(quiz.getTargetClassIds().get(0));
+        }
+        // Re-resolve total marks if quiz type or subject changed
+        String newQuizType = dto.getQuizType() != null ? dto.getQuizType() : quiz.getQuizType();
+        UUID newSubjectId = dto.getSubjectId() != null ? dto.getSubjectId() : quiz.getSubjectId();
+        if ((dto.getQuizType() != null && !dto.getQuizType().equals(quiz.getQuizType()))
+                || (dto.getSubjectId() != null && !dto.getSubjectId().equals(quiz.getSubjectId()))) {
+            BigDecimal resolvedTotalMarks = resolveTotalMarksFromScheme(schoolId, newSubjectId, newQuizType);
+            quiz.setTotalMarks(resolvedTotalMarks);
+        }
         quiz.setDurationMinutes(dto.getDurationMinutes() != null ? dto.getDurationMinutes() : quiz.getDurationMinutes());
-        quiz.setTotalMarks(dto.getTotalMarks() != null ? dto.getTotalMarks() : quiz.getTotalMarks());
         quiz.setPassMark(dto.getPassMark() != null ? dto.getPassMark() : quiz.getPassMark());
         quiz.setShuffleQuestions(Boolean.TRUE.equals(dto.getShuffleQuestions()));
         quiz.setShowResultsImmediately(dto.getShowResultsImmediately() != null ? dto.getShowResultsImmediately() : quiz.getShowResultsImmediately());
@@ -150,7 +293,7 @@ public class QuizService {
         quiz.setStartTime(dto.getStartTime());
         quiz.setEndTime(dto.getEndTime());
         quiz.setStatus(dto.getStatus() != null ? dto.getStatus() : quiz.getStatus());
-        quiz.setQuizType(dto.getQuizType() != null ? dto.getQuizType() : quiz.getQuizType());
+        quiz.setQuizType(newQuizType);
         quiz.setIsEnabled(dto.getIsEnabled() != null ? dto.getIsEnabled() : quiz.getIsEnabled());
         quiz.setShowCorrectAnswers(dto.getShowCorrectAnswers() != null ? dto.getShowCorrectAnswers() : quiz.getShowCorrectAnswers());
         quiz.setResultVisibilityType(dto.getResultVisibilityType() != null ? dto.getResultVisibilityType() : quiz.getResultVisibilityType());
@@ -790,7 +933,7 @@ public class QuizService {
     }
 
     @Transactional
-    public void addQuizScoreToGrade(UUID schoolId, UUID quizId) {
+    public Map<String, Object> addQuizScoreToGrade(UUID schoolId, UUID quizId) {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new com.schoolsaas.exception.ResourceNotFoundException("Quiz", "id", quizId));
         if (!quiz.getSchoolId().equals(schoolId)) {
@@ -804,6 +947,7 @@ public class QuizService {
                 .filter(s -> !"IN_PROGRESS".equals(s.getStatus()))
                 .collect(Collectors.groupingBy(QuizSubmission::getStudentId));
 
+        int processed = 0;
         for (Map.Entry<UUID, List<QuizSubmission>> entry : byStudent.entrySet()) {
             UUID studentId = entry.getKey();
             AggregatedScore aggregated = aggregateSubmissions(
@@ -836,6 +980,71 @@ public class QuizService {
                 grade.setRemarks("Auto-graded from " + (quiz.getQuizType() != null ? quiz.getQuizType() : "quiz") + ": " + quiz.getTitle());
                 gradeRepository.save(grade);
             }
+            processed++;
+        }
+
+        // Also mark this quiz as the selected one for its component type in the gradebook
+        UUID effectiveClassId = quiz.getClassId();
+        if (effectiveClassId == null && quiz.getTargetClassIds() != null && !quiz.getTargetClassIds().isEmpty()) {
+            effectiveClassId = quiz.getTargetClassIds().get(0);
+            quiz.setClassId(effectiveClassId);
+        }
+        if (quiz.getQuizType() != null && effectiveClassId != null && quiz.getSubjectId() != null) {
+            Optional<Quiz> currentlySelected = quizRepository.findBySchoolIdAndClassIdAndSubjectIdAndQuizTypeAndIsSelectedForGradeTrue(
+                    schoolId, effectiveClassId, quiz.getSubjectId(), quiz.getQuizType().toUpperCase());
+            currentlySelected.ifPresent(q -> {
+                q.setIsSelectedForGrade(false);
+                quizRepository.save(q);
+            });
+            quiz.setIsSelectedForGrade(true);
+            quiz.setSelectedAt(LocalDateTime.now());
+            quizRepository.save(quiz);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("processed", processed);
+        result.put("quizTitle", quiz.getTitle());
+        result.put("quizType", quiz.getQuizType());
+        result.put("totalSubmissions", byStudent.size());
+        return result;
+    }
+
+    /**
+     * Resolves the total marks for a quiz from the subject's grading scheme.
+     * The quizType must match a component name in the scheme (case-insensitive).
+     */
+    private BigDecimal resolveTotalMarksFromScheme(UUID schoolId, UUID subjectId, String quizType) {
+        if (subjectId == null || quizType == null) {
+            return new BigDecimal("100.00");
+        }
+        try {
+            GradingScheme scheme = gradingSchemeService.getEffectiveScheme(schoolId, subjectId);
+            if (scheme == null || scheme.getComponents() == null || scheme.getComponents().isEmpty()) {
+                throw new com.schoolsaas.exception.BadRequestException(
+                    "Subject has no grading scheme configured. Please assign a grading scheme to this subject first."
+                );
+            }
+            String normalizedType = quizType.trim();
+            GradingComponent component = scheme.getComponents().stream()
+                    .filter(c -> c.getName() != null && c.getName().trim().equalsIgnoreCase(normalizedType))
+                    .findFirst()
+                    .orElse(null);
+            if (component == null) {
+                throw new com.schoolsaas.exception.BadRequestException(
+                    "Grading scheme '" + scheme.getName() + "' has no component named '" + quizType + "'. " +
+                    "Available components: " + scheme.getComponents().stream()
+                        .map(GradingComponent::getName)
+                        .collect(Collectors.joining(", "))
+                );
+            }
+            return new BigDecimal(component.getWeight());
+        } catch (RuntimeException ex) {
+            if (ex instanceof com.schoolsaas.exception.BadRequestException) {
+                throw ex;
+            }
+            throw new com.schoolsaas.exception.BadRequestException(
+                "Could not resolve total marks from grading scheme: " + ex.getMessage()
+            );
         }
     }
 }

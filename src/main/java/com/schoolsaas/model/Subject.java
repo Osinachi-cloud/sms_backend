@@ -58,6 +58,9 @@ public class Subject {
     @Builder.Default
     private List<UUID> classIds = List.of();
 
+    @Column(name = "grading_scheme_id")
+    private UUID gradingSchemeId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

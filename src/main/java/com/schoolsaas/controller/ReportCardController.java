@@ -44,4 +44,9 @@ public class ReportCardController {
         List<ReportCardDto> list = reportCardService.getStudentReportCards(studentId);
         return ResponseEntity.ok(new PageImpl<>(list, pageable, list.size()));
     }
+
+    @GetMapping("/student/{studentId}/report")
+    public ResponseEntity<Map<String, Object>> getStudentReport(@PathVariable UUID schoolId, @PathVariable UUID studentId) {
+        return ResponseEntity.ok(reportCardService.getStudentReport(schoolId, studentId));
+    }
 }

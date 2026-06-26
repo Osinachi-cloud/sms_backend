@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,6 +24,142 @@ public class GradebookService {
     private final TeacherClassRepository teacherClassRepository;
     private final TermRepository termRepository;
     private final AcademicSessionRepository sessionRepository;
+    private final SubjectRepository subjectRepository;
+    private final ClassRepository classRepository;
+
+    private final GradingSchemeService gradingSchemeService;
+    private final QuizRepository quizRepository;
+    private final QuizSubmissionRepository quizSubmissionRepository;
+    private final StudentRepository studentRepository;
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> computeGradebook(UUID schoolId, UUID classId, UUID subjectId) {
+        List<Map<String, Object>> allResults = new ArrayList<>();
+
+        List<Subject> subjects;
+        if (subjectId != null) {
+            subjects = subjectRepository.findById(subjectId).map(List::of).orElse(List.of());
+        } else {
+            subjects = subjectRepository.findBySchoolIdAndIsActiveTrue(schoolId);
+        }
+
+        for (Subject subject : subjects) {
+            GradingScheme scheme;
+            try {
+                scheme = gradingSchemeService.getEffectiveScheme(schoolId, subject.getId());
+            } catch (RuntimeException ex) {
+                continue; // no scheme for this subject, skip
+            }
+
+            List<UUID> targetClassIds;
+            if (classId != null) {
+                targetClassIds = List.of(classId);
+            } else {
+                targetClassIds = studentRepository.findBySchoolId(schoolId).stream()
+                        .map(Student::getClassId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+            }
+
+            Map<UUID, String> classNameMap = new HashMap<>();
+
+            for (UUID clsId : targetClassIds) {
+                List<Student> students = studentRepository.findBySchoolIdAndClassId(schoolId, clsId);
+                if (students.isEmpty()) continue;
+
+                String clsName = classNameMap.computeIfAbsent(clsId,
+                        id -> classRepository.findById(id).map(SchoolClass::getName).orElse(""));
+
+                for (Student student : students) {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("student_id", student.getId());
+                    row.put("student_name", student.getFullName());
+                    row.put("class_id", clsId);
+                    row.put("class_name", clsName);
+                    row.put("subject_id", subject.getId());
+                    row.put("subject_name", subject.getName());
+
+                    double totalScore = 0;
+                    boolean allResolved = true;
+                    List<Map<String, Object>> componentResults = new ArrayList<>();
+
+                    for (GradingComponent component : scheme.getComponents()) {
+                        Map<String, Object> compResult = new HashMap<>();
+                        compResult.put("component_name", component.getName());
+                        compResult.put("weight", component.getWeight());
+
+                        Optional<Quiz> selectedQuiz = quizRepository.findBySchoolIdAndClassIdAndSubjectIdAndQuizTypeAndIsSelectedForGradeTrue(
+                                schoolId, clsId, subject.getId(), component.getName().toUpperCase());
+
+                        if (selectedQuiz.isEmpty()) {
+                            selectedQuiz = quizRepository.findBySchoolIdAndSubjectIdAndQuizTypeAndIsSelectedForGradeTrue(
+                                            schoolId, subject.getId(), component.getName().toUpperCase())
+                                    .stream()
+                                    .filter(q -> q.getTargetClassIds() != null && q.getTargetClassIds().contains(clsId))
+                                    .findFirst();
+                        }
+
+                        if (selectedQuiz.isEmpty()) {
+                            compResult.put("score", null);
+                            allResolved = false;
+                        } else {
+                            Quiz quiz = selectedQuiz.get();
+                            Double resolvedScore = resolveStudentScore(student.getId(), quiz);
+
+                            if (resolvedScore == null) {
+                                if (quiz.getEndTime() != null && quiz.getEndTime().isBefore(LocalDateTime.now())) {
+                                    compResult.put("score", "-");
+                                } else {
+                                    compResult.put("score", null);
+                                    allResolved = false;
+                                }
+                            } else {
+                                double scaledScore = (resolvedScore / quiz.getTotalMarks().doubleValue()) * component.getWeight();
+                                scaledScore = Math.round(scaledScore * 10.0) / 10.0;
+                                compResult.put("score", scaledScore);
+                                totalScore += scaledScore;
+                            }
+                        }
+                        componentResults.add(compResult);
+                    }
+
+                    row.put("components", componentResults);
+                    row.put("total", allResolved ? Math.round(totalScore * 10.0) / 10.0 : null);
+                    allResults.add(row);
+                }
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("grading_scheme", (classId != null && subjectId != null) ? "Single" : "All");
+        result.put("students", allResults);
+        return result;
+    }
+
+    private Double resolveStudentScore(UUID studentId, Quiz quiz) {
+        List<QuizSubmission> submissions = quizSubmissionRepository.findByQuizIdAndStudentId(quiz.getId(), studentId);
+        if (submissions.isEmpty()) return null;
+
+        String strategy = quiz.getScoreAggregationStrategy() != null ? quiz.getScoreAggregationStrategy() : "HIGHEST";
+        
+        switch (strategy.toUpperCase()) {
+            case "LOWEST":
+                return submissions.stream()
+                        .map(s -> s.getScore() != null ? s.getScore().doubleValue() : 0.0)
+                        .min(Double::compare).orElse(0.0);
+            case "AVERAGE":
+                double avg = submissions.stream()
+                        .mapToDouble(s -> s.getScore() != null ? s.getScore().doubleValue() : 0.0)
+                        .average().orElse(0.0);
+                return Math.round(avg * 100.0) / 100.0;
+            case "HIGHEST":
+            default:
+                return submissions.stream()
+                        .map(s -> s.getScore() != null ? s.getScore().doubleValue() : 0.0)
+                        .max(Double::compare).orElse(0.0);
+        }
+    }
 
     @Transactional(readOnly = true)
     public Page<GradebookEntryDto> getGradebook(

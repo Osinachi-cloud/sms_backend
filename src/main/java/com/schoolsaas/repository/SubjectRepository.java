@@ -23,4 +23,6 @@ public interface SubjectRepository extends JpaRepository<Subject, UUID> {
     List<Subject> findBySchoolIdAndClassId(UUID schoolId, UUID classId);
 
     Page<Subject> findBySchoolId(UUID schoolId, Pageable pageable);
+
+    boolean existsByGradingSchemeId(UUID gradingSchemeId);
 }

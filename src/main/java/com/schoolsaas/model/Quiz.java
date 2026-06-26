@@ -82,7 +82,7 @@ public class Quiz {
 
     @Column(name = "quiz_type")
     @Builder.Default
-    private String quizType = "QUIZ"; // EXAM, TEST, QUIZ
+    private String quizType = "QUIZ"; // QUIZ, ASSIGNMENT, ASSESSMENT, EXAM
 
     @Column(name = "is_enabled")
     @Builder.Default
@@ -109,6 +109,16 @@ public class Quiz {
 
     @Column(name = "session_id")
     private UUID sessionId;
+
+    @Column(name = "is_selected_for_grade")
+    @Builder.Default
+    private Boolean isSelectedForGrade = false;
+
+    @Column(name = "selected_at")
+    private LocalDateTime selectedAt;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

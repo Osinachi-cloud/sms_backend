@@ -143,12 +143,56 @@ public class QuizController {
     }
 
     @PostMapping("/{quizId}/add-to-grades")
-    @PreAuthorize("hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
-    public ResponseEntity<Void> addToGrades(
+    @PreAuthorize("hasPermission(#schoolId, 'student.grades.manage') or hasPermission(#schoolId, 'cms.content.edit') or hasPermission(#schoolId, 'cms.content.edit.any') or hasRole('GENERAL_ADMIN') or hasRole('APP_ADMIN')")
+    public ResponseEntity<Map<String, Object>> addToGrades(
             @PathVariable UUID schoolId, @PathVariable UUID quizId) {
-        quizService.addQuizScoreToGrade(schoolId, quizId);
+        return ResponseEntity.ok(quizService.addQuizScoreToGrade(schoolId, quizId));
+    }
+
+    @PostMapping("/grade-selections")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<Void> selectForGrade(
+            @PathVariable UUID schoolId,
+            @RequestBody Map<String, Object> body) {
+        UUID teacherId = getTeacherId(schoolId);
+        quizService.selectQuizForGrade(
+                schoolId,
+                teacherId,
+                UUID.fromString(body.get("class_id").toString()),
+                UUID.fromString(body.get("subject_id").toString()),
+                body.get("component_type").toString(),
+                body.get("quiz_id") != null ? UUID.fromString(body.get("quiz_id").toString()) : null
+        );
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/grade-selections/undo")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<Void> undoSelection(
+            @PathVariable UUID schoolId,
+            @RequestBody Map<String, UUID> body) {
+        UUID teacherId = getTeacherId(schoolId);
+        quizService.undoSelection(teacherId, body.get("subject_id"), body.get("class_id"));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/grade-selections/redo")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<Void> redoSelection(
+            @PathVariable UUID schoolId,
+            @RequestBody Map<String, UUID> body) {
+        UUID teacherId = getTeacherId(schoolId);
+        quizService.redoSelection(teacherId, body.get("subject_id"), body.get("class_id"));
+        return ResponseEntity.ok().build();
+    }
+
+    private UUID getTeacherId(UUID schoolId) {
+        UUID userId = SecurityUtils.getCurrentUser().orElseThrow().getId();
+        return teacherRepository.findBySchoolIdAndUserId(schoolId, userId)
+                .orElseThrow(() -> new RuntimeException("Teacher not found")).getId();
+    }
+
+    private final com.schoolsaas.repository.TeacherRepository teacherRepository;
 
     /**
      * Resolves the student ID from the explicit parameter or infers it from the

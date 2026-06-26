@@ -29,6 +29,7 @@ public class SubjectResponse {
     private List<UUID> classIds;
     private List<String> classNames;
     private Long enrollmentCount;
+    private UUID gradingSchemeId;
     private LocalDateTime createdAt;
 
     public static SubjectResponse fromEntity(Subject subject) {

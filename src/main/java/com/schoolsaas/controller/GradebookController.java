@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -31,5 +32,14 @@ public class GradebookController {
             Pageable pageable) {
         return ResponseEntity.ok(gradebookService.getGradebook(
                 schoolId, classId, subjectId, studentId, termId, sessionId, search, pageable));
+    }
+
+    @GetMapping("/compute")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> computeGradebook(
+            @PathVariable UUID schoolId,
+            @RequestParam(required = false) UUID classId,
+            @RequestParam(required = false) UUID subjectId) {
+        return ResponseEntity.ok(gradebookService.computeGradebook(schoolId, classId, subjectId));
     }
 }

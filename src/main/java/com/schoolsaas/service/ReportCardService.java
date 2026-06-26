@@ -14,8 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +30,52 @@ public class ReportCardService {
     private final AttendanceRepository attendanceRepository;
     private final GradeRepository gradeRepository;
     private final NotificationService notificationService;
+
+    private final GradebookService gradebookService;
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getStudentReport(UUID schoolId, UUID studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        
+        List<Subject> subjects = subjectRepository.findBySchoolId(schoolId);
+        List<Map<String, Object>> subjectBreakdowns = new ArrayList<>();
+        double totalAverage = 0;
+        int count = 0;
+
+        for (Subject subject : subjects) {
+            // Compute gradebook for the class and subject, then filter for student
+            // Optimization: Filter at service level if needed
+            Map<String, Object> gradebook = gradebookService.computeGradebook(schoolId, student.getClassId(), subject.getId());
+            List<Map<String, Object>> studentResults = (List<Map<String, Object>>) gradebook.get("students");
+            
+            Optional<Map<String, Object>> studentRow = studentResults.stream()
+                    .filter(r -> r.get("student_id").equals(studentId))
+                    .findFirst();
+
+            if (studentRow.isPresent()) {
+                Map<String, Object> row = studentRow.get();
+                row.put("subject_name", subject.getName());
+                row.put("grading_scheme", gradebook.get("grading_scheme"));
+                subjectBreakdowns.add(row);
+                
+                if (row.get("total") != null) {
+                    totalAverage += (double) row.get("total");
+                    count++;
+                }
+            }
+        }
+
+        Double overallAverage = count > 0 ? Math.round((totalAverage / count) * 10.0) / 10.0 : null;
+        Map<String, Object> report = new HashMap<>();
+        report.put("student_name", student.getFullName());
+        report.put("class_id", student.getClassId());
+        report.put("subjects", subjectBreakdowns);
+        report.put("overall_average", overallAverage);
+        report.put("overall_grade", overallAverage != null ? calculateGradeLetter(BigDecimal.valueOf(overallAverage)) : null);
+        
+        return report;
+    }
 
     @Transactional
     public ReportCardDto generateReportCard(UUID schoolId, UUID studentId, UUID termId, UUID templateId) {

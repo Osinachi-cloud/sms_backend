@@ -29,9 +29,9 @@ public class GradebookQueryRepository {
                 COALESCE(cl.name, '') AS class_name,
                 g.subject_id::varchar AS subject_id,
                 COALESCE(subj.name, '') AS subject_name,
-                g.assessment_type AS source_title,
+                COALESCE(qz.title, g.assessment_type) AS source_title,
                 'GRADE' AS source_type,
-                g.assessment_type,
+                CASE WHEN g.assessment_type LIKE 'QUIZ_%' THEN 'QUIZ' ELSE g.assessment_type END AS assessment_type,
                 g.score,
                 g.max_score,
                 g.grade_letter,
@@ -46,6 +46,7 @@ public class GradebookQueryRepository {
             LEFT JOIN subjects subj ON subj.id = g.subject_id
             LEFT JOIN terms t ON t.id = g.term_id
             LEFT JOIN academic_sessions ses ON ses.id = g.session_id
+            LEFT JOIN quizzes qz ON g.assessment_type LIKE 'QUIZ_%' AND qz.id::varchar = SUBSTRING(g.assessment_type FROM 6)
             WHERE g.school_id = :schoolId
 
             UNION ALL

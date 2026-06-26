@@ -4,10 +4,12 @@ import com.schoolsaas.dto.subject.SubjectRequest;
 import com.schoolsaas.dto.subject.SubjectResponse;
 import com.schoolsaas.exception.BadRequestException;
 import com.schoolsaas.exception.ResourceNotFoundException;
+import com.schoolsaas.model.GradingScheme;
 import com.schoolsaas.model.Student;
 import com.schoolsaas.model.StudentSubjectEnrollment;
 import com.schoolsaas.model.Subject;
 import com.schoolsaas.repository.ClassRepository;
+import com.schoolsaas.repository.GradingSchemeRepository;
 import com.schoolsaas.repository.StudentRepository;
 import com.schoolsaas.repository.StudentSubjectEnrollmentRepository;
 import com.schoolsaas.repository.SubjectRepository;
@@ -31,6 +33,7 @@ public class SubjectService {
     private final StudentSubjectEnrollmentRepository enrollmentRepository;
     private final StudentRepository studentRepository;
     private final ClassRepository classRepository;
+    private final GradingSchemeRepository gradingSchemeRepository;
 
     @Transactional(readOnly = true)
     public List<SubjectResponse> getSubjects(UUID schoolId) {
@@ -74,6 +77,27 @@ public class SubjectService {
         if (request.getName() == null || request.getName().isBlank()) {
             throw new BadRequestException("Subject name is required");
         }
+        // Validate grading scheme: a subject MUST have a grading scheme assigned
+        UUID schemeId = request.getGradingSchemeId();
+        if (schemeId == null) {
+            // Fall back to the default scheme for this school if none provided
+            schemeId = gradingSchemeRepository.findBySchoolIdAndIsDefaultTrue(schoolId)
+                    .map(gs -> gs.getId())
+                    .orElse(null);
+        }
+        if (schemeId == null) {
+            throw new BadRequestException(
+                "No grading scheme is configured for this school. " +
+                "Please go to Settings > Grading Schemes and create a default scheme first, then try again."
+            );
+        }
+        // Verify the scheme exists and belongs to this school
+        GradingScheme scheme = gradingSchemeRepository.findById(schemeId)
+                .orElseThrow(() -> new BadRequestException("Selected grading scheme does not exist."));
+        if (!scheme.getSchoolId().equals(schoolId)) {
+            throw new BadRequestException("Selected grading scheme does not belong to this school.");
+        }
+
         // Teacher-created subjects are automatically free unless admin overrides
         boolean isFree = request.getIsFree() != null ? request.getIsFree() : (!"TEACHER".equals(createdByType));
         BigDecimal cost = request.getCost() != null ? request.getCost() : BigDecimal.ZERO;
@@ -90,6 +114,7 @@ public class SubjectService {
                 .createdBy(createdBy)
                 .createdByType(createdByType)
                 .classIds(classIds)
+                .gradingSchemeId(schemeId)
                 .build();
         subject = subjectRepository.save(subject);
 
@@ -127,6 +152,15 @@ public class SubjectService {
         List<UUID> oldClassIds = subject.getClassIds() != null ? subject.getClassIds() : List.of();
         if (request.getClassIds() != null) {
             subject.setClassIds(request.getClassIds());
+        }
+        // Allow admins to assign/unassign grading scheme with validation
+        if (request.getGradingSchemeId() != null) {
+            GradingScheme scheme = gradingSchemeRepository.findById(request.getGradingSchemeId())
+                    .orElseThrow(() -> new BadRequestException("Selected grading scheme does not exist."));
+            if (!scheme.getSchoolId().equals(schoolId)) {
+                throw new BadRequestException("Selected grading scheme does not belong to this school.");
+            }
+            subject.setGradingSchemeId(request.getGradingSchemeId());
         }
         subject = subjectRepository.save(subject);
 
@@ -192,6 +226,7 @@ public class SubjectService {
                 .classIds(subject.getClassIds())
                 .classNames(classNames)
                 .enrollmentCount(enrollmentCount)
+                .gradingSchemeId(subject.getGradingSchemeId())
                 .createdAt(subject.getCreatedAt())
                 .build();
     }
