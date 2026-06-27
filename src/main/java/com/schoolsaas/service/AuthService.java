@@ -58,11 +58,13 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+        String login = request.getEmail() != null ? request.getEmail().trim() : "";
+        User user = userRepository.findByEmail(login)
+                .or(() -> userRepository.findByUsername(login))
+                .orElseThrow(() -> new UnauthorizedException("Invalid email/username or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new UnauthorizedException("Invalid email or password");
+            throw new UnauthorizedException("Invalid email/username or password");
         }
 
         if (!user.getIsActive()) {
@@ -131,7 +133,7 @@ public class AuthService {
 
         String accessToken = tokenProvider.generateAccessToken(
                 user.getId(),
-                user.getEmail(),
+                user.getEmail() != null ? user.getEmail() : user.getUsername(),
                 user.getPlatformRole(),
                 schoolId,
                 permissions

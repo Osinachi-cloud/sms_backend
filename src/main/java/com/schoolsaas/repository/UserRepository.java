@@ -14,7 +14,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByUsername(String username);
+
     boolean existsByEmail(String email);
+
+    boolean existsByUsername(String username);
 
     @Query("SELECT u FROM User u WHERE u.platformRole = :platformRole AND u.isActive = true")
     List<User> findByPlatformRole(String platformRole);

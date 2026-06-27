@@ -12,6 +12,7 @@ import com.schoolsaas.model.School;
 import com.schoolsaas.repository.BulkEnrollmentJobRepository;
 import com.schoolsaas.repository.SchoolRepository;
 import com.schoolsaas.repository.StudentRepository;
+import com.schoolsaas.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -39,6 +40,7 @@ public class BulkEnrollmentService {
     private final BulkEnrollmentJobRepository jobRepository;
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
+    private final UserRepository userRepository;
     private final StudentService studentService;
     private final TeacherService teacherService;
     private final ParentService parentService;
@@ -194,6 +196,8 @@ public class BulkEnrollmentService {
                 headerIndex.put(headers[i], i);
             }
 
+            validateBatchForDuplicates(schoolId, entityType, allRows, headerIndex, mapping);
+
             for (int i = 1; i < allRows.size(); i++) {
                 total.incrementAndGet();
                 try {
@@ -221,22 +225,82 @@ public class BulkEnrollmentService {
                 headerIndex.put(getCellValueAsString(headerRow.getCell(i)), i);
             }
 
+            List<String[]> allRows = new ArrayList<>();
+            allRows.add(new String[0]); // placeholder for header row
             for (int i = 1; i < sheet.getPhysicalNumberOfRows(); i++) {
+                Row row = sheet.getRow(i);
+                String[] rowData = new String[headerIndex.size()];
+                for (int j = 0; j < headerIndex.size(); j++) {
+                    Cell cell = row.getCell(j);
+                    rowData[j] = cell != null ? getCellValueAsString(cell) : "";
+                }
+                allRows.add(rowData);
+            }
+
+            validateBatchForDuplicates(schoolId, entityType, allRows, headerIndex, mapping);
+
+            for (int i = 1; i < allRows.size(); i++) {
                 total.incrementAndGet();
                 try {
-                    Row row = sheet.getRow(i);
-                    String[] rowData = new String[headerIndex.size()];
-                    for (int j = 0; j < headerIndex.size(); j++) {
-                        Cell cell = row.getCell(j);
-                        rowData[j] = cell != null ? getCellValueAsString(cell) : "";
-                    }
-                    processRow(schoolId, entityType, mapping, headerIndex, rowData, i + 1);
+                    processRow(schoolId, entityType, mapping, headerIndex, allRows.get(i), i + 1);
                     successful.incrementAndGet();
                 } catch (Exception e) {
                     failed.incrementAndGet();
                     errors.add("Row " + (i + 1) + ": " + e.getMessage());
                 }
             }
+        }
+    }
+
+    private void validateBatchForDuplicates(UUID schoolId, String entityType, List<String[]> allRows,
+                                              Map<String, Integer> headerIndex, Map<String, String> mapping) {
+        Set<String> batchEmails = new HashSet<>();
+        Set<String> batchUsernames = new HashSet<>();
+        List<String> duplicateEmails = new ArrayList<>();
+        List<String> duplicateUsernames = new ArrayList<>();
+        List<String> existingEmails = new ArrayList<>();
+        List<String> existingUsernames = new ArrayList<>();
+
+        for (int i = 1; i < allRows.size(); i++) {
+            String[] row = allRows.get(i);
+            String email = getMappedValue(mapping, headerIndex, row, "email");
+            String username = getMappedValue(mapping, headerIndex, row, "username");
+
+            if (email != null && !email.isBlank()) {
+                if (!batchEmails.add(email)) {
+                    duplicateEmails.add(email);
+                }
+                if (userRepository.existsByEmail(email)) {
+                    existingEmails.add(email);
+                }
+            }
+
+            if (username != null && !username.isBlank()) {
+                if (!batchUsernames.add(username)) {
+                    duplicateUsernames.add(username);
+                }
+                if (userRepository.existsByUsername(username)) {
+                    existingUsernames.add(username);
+                }
+            }
+        }
+
+        List<String> errorParts = new ArrayList<>();
+        if (!duplicateEmails.isEmpty()) {
+            errorParts.add("Duplicate emails within batch: " + String.join(", ", new LinkedHashSet<>(duplicateEmails)));
+        }
+        if (!duplicateUsernames.isEmpty()) {
+            errorParts.add("Duplicate usernames within batch: " + String.join(", ", new LinkedHashSet<>(duplicateUsernames)));
+        }
+        if (!existingEmails.isEmpty()) {
+            errorParts.add("Emails already exist in system: " + String.join(", ", new LinkedHashSet<>(existingEmails)));
+        }
+        if (!existingUsernames.isEmpty()) {
+            errorParts.add("Usernames already exist in system: " + String.join(", ", new LinkedHashSet<>(existingUsernames)));
+        }
+
+        if (!errorParts.isEmpty()) {
+            throw new BadRequestException("Bulk upload validation failed. " + String.join(". ", errorParts));
         }
     }
 
@@ -256,8 +320,13 @@ public class BulkEnrollmentService {
         }
 
         String email = getMappedValue(mapping, headerIndex, row, "email");
+        String username = getMappedValue(mapping, headerIndex, row, "username");
+
         if (email != null && !email.isBlank() && studentRepository.existsBySchoolIdAndEmail(schoolId, email)) {
             throw new BadRequestException("Email already exists: " + email);
+        }
+        if (username != null && !username.isBlank() && userRepository.existsByUsername(username)) {
+            throw new BadRequestException("Username already taken: " + username);
         }
 
         String admissionNumber = getMappedValue(mapping, headerIndex, row, "admission_number");
@@ -290,6 +359,7 @@ public class BulkEnrollmentService {
         CreateStudentRequest request = new CreateStudentRequest();
         request.setFullName(fullName);
         request.setEmail(email);
+        request.setUsername(username);
         request.setPhone(normalizePhone(getMappedValue(mapping, headerIndex, row, "phone")));
         request.setGender(gender);
         request.setAddress(getMappedValue(mapping, headerIndex, row, "address"));
@@ -450,6 +520,7 @@ public class BulkEnrollmentService {
         return List.of(
                 Map.of("key", "full_name", "label", "Full Name", "required", true),
                 Map.of("key", "email", "label", "Email", "required", false),
+                Map.of("key", "username", "label", "Username", "required", false),
                 Map.of("key", "phone", "label", "Phone", "required", false),
                 Map.of("key", "gender", "label", "Gender", "required", false),
                 Map.of("key", "date_of_birth", "label", "Date of Birth", "required", false),

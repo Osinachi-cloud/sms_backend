@@ -6,20 +6,15 @@
   <component name="ChangeListManager">
     <list default="true" id="6a3efcbc-8641-40a5-9e3d-8fb88aa309bc" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/GradebookController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/GradebookController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/QuizController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/QuizController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/ReportCardController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/ReportCardController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/subject/SubjectRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/subject/SubjectRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/subject/SubjectResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/subject/SubjectResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Quiz.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Quiz.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Subject.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/Subject.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/GradebookQueryRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/GradebookQueryRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/QuizRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/QuizRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/SubjectRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/SubjectRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/GradebookService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/GradebookService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/QuizService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/QuizService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/ReportCardService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/ReportCardService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/auth/LoginRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/auth/LoginRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/student/CreateStudentRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/student/CreateStudentRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/model/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/UserRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/AuthService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/BulkEnrollmentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/BulkEnrollmentService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/StudentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/StudentService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/SubjectService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/SubjectService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/TeacherService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/TeacherService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -131,7 +126,7 @@
       <workItem from="1782007880474" duration="29764000" />
       <workItem from="1782245512957" duration="26981000" />
       <workItem from="1782419506675" duration="5079000" />
-      <workItem from="1782463391762" duration="12910000" />
+      <workItem from="1782463391762" duration="17689000" />
     </task>
     <servers />
   </component>

@@ -192,8 +192,17 @@ public class StudentService {
 
     @Transactional
     public StudentResponse createStudent(UUID schoolId, CreateStudentRequest request) {
-        if (request.getEmail() != null && studentRepository.existsBySchoolIdAndEmail(schoolId, request.getEmail())) {
-            throw new BadRequestException("Student with this email already exists");
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new BadRequestException("User with this email already exists");
+            }
+            if (studentRepository.existsBySchoolIdAndEmail(schoolId, request.getEmail())) {
+                throw new BadRequestException("Student with this email already exists");
+            }
+        }
+        if (request.getUsername() != null && !request.getUsername().isBlank()
+                && userRepository.existsByUsername(request.getUsername())) {
+            throw new BadRequestException("Username already taken");
         }
 
         if (request.getClassId() != null && !classRepository.existsById(request.getClassId())) {
@@ -238,21 +247,20 @@ public class StudentService {
 
         student = studentRepository.save(student);
 
-        // Create or link user account for student (synthetic email fallback)
-        String studentEmail = (request.getEmail() != null && !request.getEmail().isBlank())
-                ? request.getEmail()
-                : generateSyntheticEmail("student", student.getId());
+        // Create or link user account for student
+        User studentUser = null;
+        String actualPassword = (request.getPassword() != null && !request.getPassword().isBlank())
+                ? request.getPassword()
+                : DEFAULT_PASSWORD;
 
-        User studentUser;
-        if (userRepository.existsByEmail(studentEmail)) {
-            studentUser = userRepository.findByEmail(studentEmail)
-                    .orElseThrow(() -> new BadRequestException("User with email exists but could not be found"));
-        } else {
-            String actualPassword = (request.getPassword() != null && !request.getPassword().isBlank())
-                    ? request.getPassword()
-                    : DEFAULT_PASSWORD;
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            // Student uses username (no email required)
+            if (userRepository.existsByUsername(request.getUsername())) {
+                throw new BadRequestException("Username already taken");
+            }
             studentUser = User.builder()
-                    .email(studentEmail)
+                    .username(request.getUsername())
+                    .email(request.getEmail()) // may be null
                     .passwordHash(passwordEncoder.encode(actualPassword))
                     .fullName(request.getFullName())
                     .phone(request.getPhone())
@@ -260,6 +268,34 @@ public class StudentService {
                     .isActive(true)
                     .build();
             studentUser = userRepository.save(studentUser);
+        } else if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            // Student uses email
+            studentUser = User.builder()
+                    .email(request.getEmail())
+                    .passwordHash(passwordEncoder.encode(actualPassword))
+                    .fullName(request.getFullName())
+                    .phone(request.getPhone())
+                    .emailVerified(true)
+                    .isActive(true)
+                    .build();
+            studentUser = userRepository.save(studentUser);
+        } else {
+            // Fallback: synthetic email for backward compatibility
+            String syntheticEmail = generateSyntheticEmail("student", student.getId());
+            if (userRepository.existsByEmail(syntheticEmail)) {
+                studentUser = userRepository.findByEmail(syntheticEmail)
+                        .orElseThrow(() -> new BadRequestException("User with email exists but could not be found"));
+            } else {
+                studentUser = User.builder()
+                        .email(syntheticEmail)
+                        .passwordHash(passwordEncoder.encode(actualPassword))
+                        .fullName(request.getFullName())
+                        .phone(request.getPhone())
+                        .emailVerified(true)
+                        .isActive(true)
+                        .build();
+                studentUser = userRepository.save(studentUser);
+            }
         }
 
         student.setUserId(studentUser.getId());
@@ -392,11 +428,23 @@ public class StudentService {
             throw new ResourceNotFoundException("Student", "id", studentId);
         }
 
-        if (request.getEmail() != null && !request.getEmail().equals(student.getEmail())) {
+        if (request.getEmail() != null && !request.getEmail().isBlank() && !request.getEmail().equals(student.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new BadRequestException("User with this email already exists");
+            }
             if (studentRepository.existsBySchoolIdAndEmail(schoolId, request.getEmail())) {
                 throw new BadRequestException("Student with this email already exists");
             }
             student.setEmail(request.getEmail());
+
+            // Cascade email change to linked user account
+            if (student.getUserId() != null) {
+                User linkedUser = userRepository.findById(student.getUserId()).orElse(null);
+                if (linkedUser != null) {
+                    linkedUser.setEmail(request.getEmail());
+                    userRepository.save(linkedUser);
+                }
+            }
         }
 
         if (request.getClassId() != null && !classRepository.existsById(request.getClassId())) {

@@ -17,6 +17,10 @@ public class CreateStudentRequest {
     @Email(message = "Invalid email format")
     private String email;
 
+    @Pattern(regexp = "^(?=.*[@$!%*?&._-])[A-Za-z0-9@$!%*?&._-]+$",
+             message = "Username must contain at least one special character (@$!%*?&._-) and no spaces")
+    private String username;
+
     private String phone;
     private LocalDate dateOfBirth;
     private String gender;

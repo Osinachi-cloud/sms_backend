@@ -58,8 +58,13 @@ public class TeacherService {
 
     @Transactional
     public TeacherResponse createTeacher(UUID schoolId, CreateTeacherRequest request) {
-        if (request.getEmail() != null && teacherRepository.existsBySchoolIdAndEmail(schoolId, request.getEmail())) {
-            throw new BadRequestException("Teacher with this email already exists");
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new BadRequestException("User with this email already exists");
+            }
+            if (teacherRepository.existsBySchoolIdAndEmail(schoolId, request.getEmail())) {
+                throw new BadRequestException("Teacher with this email already exists");
+            }
         }
 
         if (request.getEmployeeId() != null && teacherRepository.existsBySchoolIdAndEmployeeId(schoolId, request.getEmployeeId())) {
@@ -81,14 +86,15 @@ public class TeacherService {
 
         teacher = teacherRepository.save(teacher);
 
-        // Create user account if email is provided (default password if blank)
+        // Create or link user account if email is provided
         if (request.getEmail() != null && !request.getEmail().isBlank()) {
-            if (!userRepository.existsByEmail(request.getEmail())) {
+            User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+            if (user == null) {
                 String actualPassword = (request.getPassword() != null && !request.getPassword().isBlank())
                         ? request.getPassword()
                         : "Password@12";
 
-                User user = User.builder()
+                user = User.builder()
                         .email(request.getEmail())
                         .passwordHash(passwordEncoder.encode(actualPassword))
                         .fullName(request.getFullName())
@@ -98,12 +104,19 @@ public class TeacherService {
                         .build();
                 user = userRepository.save(user);
 
-                teacher.setUserId(user.getId());
-                teacherRepository.save(teacher);
+                log.info("User account created for teacher: {} in school {} with password [{}]",
+                        user.getId(), schoolId,
+                        (request.getPassword() != null && !request.getPassword().isBlank()) ? "provided" : "default");
+            }
 
-                Role teacherRole = roleRepository.findBySchoolIdAndName(schoolId, "TEACHER")
-                        .orElseThrow(() -> new BadRequestException("TEACHER role not found for school"));
+            teacher.setUserId(user.getId());
+            teacherRepository.save(teacher);
 
+            Role teacherRole = roleRepository.findBySchoolIdAndName(schoolId, "TEACHER")
+                    .orElseThrow(() -> new BadRequestException("TEACHER role not found for school"));
+
+            boolean alreadyLinked = userSchoolRepository.existsByUserIdAndSchoolId(user.getId(), schoolId);
+            if (!alreadyLinked) {
                 UserSchool userSchool = UserSchool.builder()
                         .userId(user.getId())
                         .schoolId(schoolId)
@@ -112,10 +125,7 @@ public class TeacherService {
                         .joinedAt(LocalDateTime.now())
                         .build();
                 userSchoolRepository.save(userSchool);
-
-                log.info("User account created for teacher: {} in school {} with password [{}]",
-                        user.getId(), schoolId,
-                        (request.getPassword() != null && !request.getPassword().isBlank()) ? "provided" : "default");
+                log.info("Linked existing user {} to school {} with TEACHER role", user.getId(), schoolId);
             }
         }
 
@@ -147,11 +157,23 @@ public class TeacherService {
             throw new ResourceNotFoundException("Teacher", "id", teacherId);
         }
 
-        if (request.getEmail() != null && !request.getEmail().equals(teacher.getEmail())) {
+        if (request.getEmail() != null && !request.getEmail().isBlank() && !request.getEmail().equals(teacher.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new BadRequestException("User with this email already exists");
+            }
             if (teacherRepository.existsBySchoolIdAndEmail(schoolId, request.getEmail())) {
                 throw new BadRequestException("Teacher with this email already exists");
             }
             teacher.setEmail(request.getEmail());
+
+            // Cascade email change to linked user account
+            if (teacher.getUserId() != null) {
+                User linkedUser = userRepository.findById(teacher.getUserId()).orElse(null);
+                if (linkedUser != null) {
+                    linkedUser.setEmail(request.getEmail());
+                    userRepository.save(linkedUser);
+                }
+            }
         }
 
         if (request.getEmployeeId() != null && !request.getEmployeeId().equals(teacher.getEmployeeId())) {
@@ -172,13 +194,72 @@ public class TeacherService {
 
         teacher = teacherRepository.save(teacher);
 
-        // Update subject-class assignments if provided
-        if (request.getSubjectAssignments() != null) {
-            // Remove existing assignments
-            List<TeacherClass> existing = teacherClassRepository.findByTeacherId(teacherId);
-            teacherClassRepository.deleteAll(existing);
+        // Ensure user account linkage when email is present
+        if (teacher.getEmail() != null && !teacher.getEmail().isBlank()) {
+            if (teacher.getUserId() == null) {
+                // Teacher has no linked user — create or link one
+                User user = userRepository.findByEmail(teacher.getEmail()).orElse(null);
+                if (user == null) {
+                    String actualPassword = (request.getPassword() != null && !request.getPassword().isBlank())
+                            ? request.getPassword()
+                            : "Password@12";
+                    user = User.builder()
+                            .email(teacher.getEmail())
+                            .passwordHash(passwordEncoder.encode(actualPassword))
+                            .fullName(teacher.getFullName())
+                            .phone(teacher.getPhone())
+                            .emailVerified(true)
+                            .isActive(true)
+                            .build();
+                    user = userRepository.save(user);
+                    log.info("User account created during teacher update: {} in school {}", user.getId(), schoolId);
+                }
+                teacher.setUserId(user.getId());
+                teacherRepository.save(teacher);
 
-            // Create new assignments
+                Role teacherRole = roleRepository.findBySchoolIdAndName(schoolId, "TEACHER")
+                        .orElseThrow(() -> new BadRequestException("TEACHER role not found for school"));
+                boolean alreadyLinked = userSchoolRepository.existsByUserIdAndSchoolId(user.getId(), schoolId);
+                if (!alreadyLinked) {
+                    UserSchool userSchool = UserSchool.builder()
+                            .userId(user.getId())
+                            .schoolId(schoolId)
+                            .roleId(teacherRole.getId())
+                            .isActive(true)
+                            .joinedAt(LocalDateTime.now())
+                            .build();
+                    userSchoolRepository.save(userSchool);
+                }
+            } else {
+                // Teacher already has a user; ensure UserSchool exists for this school
+                Role teacherRole = roleRepository.findBySchoolIdAndName(schoolId, "TEACHER")
+                        .orElseThrow(() -> new BadRequestException("TEACHER role not found for school"));
+                boolean alreadyLinked = userSchoolRepository.existsByUserIdAndSchoolId(teacher.getUserId(), schoolId);
+                if (!alreadyLinked) {
+                    UserSchool userSchool = UserSchool.builder()
+                            .userId(teacher.getUserId())
+                            .schoolId(schoolId)
+                            .roleId(teacherRole.getId())
+                            .isActive(true)
+                            .joinedAt(LocalDateTime.now())
+                            .build();
+                    userSchoolRepository.save(userSchool);
+                }
+            }
+        }
+
+        // Update subject-class assignments if provided
+        // Only touch assignments where isClassTeacher = false (subject teaching assignments).
+        // Leave class-teacher assignments (isClassTeacher = true) untouched.
+        if (request.getSubjectAssignments() != null) {
+            // Remove existing subject-class assignments only
+            List<TeacherClass> existing = teacherClassRepository.findByTeacherId(teacherId);
+            List<TeacherClass> subjectAssignments = existing.stream()
+                    .filter(tc -> tc.getSubjectId() != null && Boolean.FALSE.equals(tc.getIsClassTeacher()))
+                    .toList();
+            teacherClassRepository.deleteAll(subjectAssignments);
+
+            // Create new subject-class assignments
             for (CreateTeacherRequest.SubjectClassAssignment sca : request.getSubjectAssignments()) {
                 if (sca.getSubjectId() != null && sca.getClassId() != null) {
                     TeacherClass tc = TeacherClass.builder()
