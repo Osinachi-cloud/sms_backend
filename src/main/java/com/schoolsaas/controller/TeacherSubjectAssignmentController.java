@@ -2,6 +2,10 @@ package com.schoolsaas.controller;
 
 import com.schoolsaas.dto.teacher.TeacherSubjectAssignmentDto;
 import com.schoolsaas.dto.teacher.TeacherSubjectAssignmentRequest;
+import com.schoolsaas.exception.ResourceNotFoundException;
+import com.schoolsaas.model.Teacher;
+import com.schoolsaas.repository.TeacherRepository;
+import com.schoolsaas.security.SecurityUtils;
 import com.schoolsaas.service.TeacherSubjectAssignmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +24,7 @@ import java.util.UUID;
 public class TeacherSubjectAssignmentController {
 
     private final TeacherSubjectAssignmentService assignmentService;
+    private final TeacherRepository teacherRepository;
 
     @GetMapping("/classes/{classId}")
     @PreAuthorize("isAuthenticated()")
@@ -48,5 +53,18 @@ public class TeacherSubjectAssignmentController {
     public ResponseEntity<Void> removeAssignment(@PathVariable UUID schoolId, @PathVariable UUID assignmentId) {
         assignmentService.removeAssignment(schoolId, assignmentId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TeacherSubjectAssignmentDto>> getMyAssignments(@PathVariable UUID schoolId) {
+        UUID userId = SecurityUtils.getCurrentUserId();
+        Teacher teacher = teacherRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher", "userId", userId));
+        if (!teacher.getSchoolId().equals(schoolId)) {
+            throw new ResourceNotFoundException("Teacher", "userId", userId);
+        }
+        List<TeacherSubjectAssignmentDto> list = assignmentService.getAssignmentsByTeacher(schoolId, teacher.getId());
+        return ResponseEntity.ok(list);
     }
 }

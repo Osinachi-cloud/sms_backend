@@ -14,6 +14,7 @@ import com.schoolsaas.repository.ParentStudentRepository;
 import com.schoolsaas.repository.StudentSubjectEnrollmentRepository;
 import com.schoolsaas.repository.SubjectRepository;
 import com.schoolsaas.security.SecurityUtils;
+import com.schoolsaas.service.AttendanceService;
 import com.schoolsaas.service.GradeService;
 import com.schoolsaas.service.ParentService;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class ParentController {
     private final ParentRepository parentRepository;
     private final ParentStudentRepository parentStudentRepository;
     private final GradeService gradeService;
+    private final AttendanceService attendanceService;
     private final StudentSubjectEnrollmentRepository enrollmentRepository;
     private final SubjectRepository subjectRepository;
 
@@ -97,5 +99,20 @@ public class ParentController {
                 .map(SubjectResponse::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(subjects);
+    }
+
+    @GetMapping("/me/children/{studentId}/attendance")
+    public ResponseEntity<?> getChildAttendance(
+            @PathVariable UUID schoolId,
+            @PathVariable UUID studentId) {
+        UUID userId = SecurityUtils.getCurrentUserId();
+        Parent parent = parentRepository.findByUserIdAndSchoolId(userId, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Parent", "userId", userId));
+        List<UUID> childIds = parentStudentRepository.findByParentId(parent.getId())
+                .stream().map(ParentStudent::getStudentId).toList();
+        if (!childIds.contains(studentId)) {
+            throw new BadRequestException("This student is not linked to your account");
+        }
+        return ResponseEntity.ok(attendanceService.getStudentAttendance(schoolId, studentId));
     }
 }
