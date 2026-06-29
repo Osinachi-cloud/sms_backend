@@ -1,11 +1,14 @@
 package com.schoolsaas.controller;
 
 import com.schoolsaas.dto.reportcard.ReportCardDto;
+import com.schoolsaas.service.ReportCardPdfService;
 import com.schoolsaas.service.ReportCardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +22,7 @@ import java.util.UUID;
 public class ReportCardController {
 
     private final ReportCardService reportCardService;
+    private final ReportCardPdfService pdfService;
 
     @PostMapping
     public ResponseEntity<ReportCardDto> generateReportCard(@PathVariable UUID schoolId, @RequestBody Map<String, String> body) {
@@ -51,5 +55,18 @@ public class ReportCardController {
             @PathVariable UUID studentId,
             @RequestParam(required = false) UUID termId) {
         return ResponseEntity.ok(reportCardService.getStudentReport(schoolId, studentId, termId));
+    }
+
+    @GetMapping("/student/{studentId}/pdf")
+    public ResponseEntity<byte[]> getStudentReportPdf(
+            @PathVariable UUID schoolId,
+            @PathVariable UUID studentId,
+            @RequestParam(required = false) UUID termId) throws Exception {
+        Map<String, Object> report = reportCardService.getStudentReport(schoolId, studentId, termId);
+        byte[] pdf = pdfService.generateReportCardPdf(report);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"report-card.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

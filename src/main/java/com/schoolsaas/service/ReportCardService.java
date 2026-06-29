@@ -35,6 +35,8 @@ public class ReportCardService {
     private final AcademicSessionRepository sessionRepository;
     private final StudentAffectiveRatingRepository affectiveRatingRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final ReportCardPdfService pdfService;
 
     private final GradebookService gradebookService;
 
