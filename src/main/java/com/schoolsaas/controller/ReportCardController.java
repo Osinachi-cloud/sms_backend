@@ -46,7 +46,10 @@ public class ReportCardController {
     }
 
     @GetMapping("/student/{studentId}/report")
-    public ResponseEntity<Map<String, Object>> getStudentReport(@PathVariable UUID schoolId, @PathVariable UUID studentId) {
-        return ResponseEntity.ok(reportCardService.getStudentReport(schoolId, studentId));
+    public ResponseEntity<Map<String, Object>> getStudentReport(
+            @PathVariable UUID schoolId,
+            @PathVariable UUID studentId,
+            @RequestParam(required = false) UUID termId) {
+        return ResponseEntity.ok(reportCardService.getStudentReport(schoolId, studentId, termId));
     }
 }

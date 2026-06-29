@@ -84,17 +84,21 @@ public class GradebookService {
                     boolean allResolved = true;
                     List<Map<String, Object>> componentResults = new ArrayList<>();
 
-                    for (GradingComponent component : scheme.getComponents()) {
+                    List<GradingComponent> components = scheme.getComponents() != null ? scheme.getComponents() : List.of();
+                    for (GradingComponent component : components) {
+                        if (component.getName() == null || component.getWeight() == null) continue;
+
                         Map<String, Object> compResult = new HashMap<>();
                         compResult.put("component_name", component.getName());
                         compResult.put("weight", component.getWeight());
 
+                        String quizType = component.getName().toUpperCase();
                         Optional<Quiz> selectedQuiz = quizRepository.findBySchoolIdAndClassIdAndSubjectIdAndQuizTypeAndIsSelectedForGradeTrue(
-                                schoolId, clsId, subject.getId(), component.getName().toUpperCase());
+                                schoolId, clsId, subject.getId(), quizType);
 
                         if (selectedQuiz.isEmpty()) {
                             selectedQuiz = quizRepository.findBySchoolIdAndSubjectIdAndQuizTypeAndIsSelectedForGradeTrue(
-                                            schoolId, subject.getId(), component.getName().toUpperCase())
+                                            schoolId, subject.getId(), quizType)
                                     .stream()
                                     .filter(q -> q.getTargetClassIds() != null && q.getTargetClassIds().contains(clsId))
                                     .findFirst();
@@ -114,6 +118,9 @@ public class GradebookService {
                                     compResult.put("score", null);
                                     allResolved = false;
                                 }
+                            } else if (quiz.getTotalMarks() == null || quiz.getTotalMarks().doubleValue() == 0) {
+                                compResult.put("score", null);
+                                allResolved = false;
                             } else {
                                 double scaledScore = (resolvedScore / quiz.getTotalMarks().doubleValue()) * component.getWeight();
                                 scaledScore = Math.round(scaledScore * 10.0) / 10.0;
@@ -125,7 +132,8 @@ public class GradebookService {
                     }
 
                     row.put("components", componentResults);
-                    row.put("total", allResolved ? Math.round(totalScore * 10.0) / 10.0 : null);
+                    row.put("total", Math.round(totalScore * 10.0) / 10.0);
+                    row.put("total_complete", allResolved);
                     allResults.add(row);
                 }
             }
