@@ -4,11 +4,11 @@
 # ----------------------------------------------
 
 # Stage 1: Build
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:21-jdk-jammy AS builder
 WORKDIR /app
 
-# Install dependencies for build
-RUN apk add --no-cache bash maven
+# Install Maven
+RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
 # Copy POM first (cache layer)
 COPY pom.xml .
@@ -18,24 +18,20 @@ RUN mvn dependency:go-offline -B
 
 # Copy source and build
 COPY src src
-RUN mvn clean package -DskipTests -B && \
-    mkdir -p target/dependency && \
-    (cd target/dependency; jar -xf ../*.jar)
+RUN mvn clean package -DskipTests -B
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
 # Create non-root user for security
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN groupadd -r spring && useradd -r -g spring spring
 
 # Install curl for health checks
-RUN apk add --no-cache curl
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Copy layered JAR contents from builder
-COPY --from=builder /app/target/dependency/BOOT-INF/lib lib/
-COPY --from=builder /app/target/dependency/META-INF META-INF/
-COPY --from=builder /app/target/dependency/BOOT-INF/classes classes/
+# Copy the Spring Boot fat JAR
+COPY --from=builder /app/target/*.jar app.jar
 
 # Set ownership
 RUN chown -R spring:spring /app
@@ -53,4 +49,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8080/api/health || exit 1
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -cp classes:lib/* com.schoolsaas.SchoolSaasApplication"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
