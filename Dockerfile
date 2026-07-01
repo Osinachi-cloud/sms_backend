@@ -22,7 +22,7 @@ COPY src src
 RUN mvn clean package -DskipTests -B
 
 # Stage 2: Runtime
-FROM openjdk:25-slim
+FROM eclipse-temurin:25-jdk-jammy
 WORKDIR /app
 
 # Create non-root user for security
