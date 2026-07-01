@@ -5,7 +5,7 @@
 # ----------------------------------------------
 
 # Stage 1: Build
-FROM openjdk:25-slim AS builder
+FROM eclipse-temurin:25-jdk-jammy AS builder
 WORKDIR /app
 
 # Install Maven
