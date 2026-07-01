@@ -1,10 +1,11 @@
 # ----------------------------------------------
 # SchoolSaaS Backend — Production Dockerfile
 # Optimized multi-stage build for Railway / VPS
+# Using Java 25
 # ----------------------------------------------
 
 # Stage 1: Build
-FROM eclipse-temurin:21-jdk-jammy AS builder
+FROM openjdk:25-slim AS builder
 WORKDIR /app
 
 # Install Maven
@@ -21,7 +22,7 @@ COPY src src
 RUN mvn clean package -DskipTests -B
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre-jammy
+FROM openjdk:25-slim
 WORKDIR /app
 
 # Create non-root user for security
