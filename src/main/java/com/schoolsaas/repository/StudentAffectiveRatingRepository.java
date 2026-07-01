@@ -13,6 +13,8 @@ public interface StudentAffectiveRatingRepository extends JpaRepository<StudentA
 
     List<StudentAffectiveRating> findBySchoolIdAndStudentIdAndTermId(UUID schoolId, UUID studentId, UUID termId);
 
+    List<StudentAffectiveRating> findBySchoolIdAndStudentId(UUID schoolId, UUID studentId);
+
     List<StudentAffectiveRating> findBySchoolIdAndTermId(UUID schoolId, UUID termId);
 
     Optional<StudentAffectiveRating> findBySchoolIdAndStudentIdAndTermIdAndTrait(UUID schoolId, UUID studentId, UUID termId, String trait);

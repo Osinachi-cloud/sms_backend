@@ -25,6 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.Base64;
 import java.util.List;
@@ -110,25 +114,138 @@ public class IdCardService {
         PdfWriter writer = PdfWriter.getInstance(document, baos);
         document.open();
 
-        // Header
-        Font headerFont = new Font(Font.HELVETICA, 10, Font.BOLD, new java.awt.Color(0, 51, 153));
-        Paragraph header = new Paragraph("STUDENT ID CARD", headerFont);
-        header.setAlignment(Element.ALIGN_CENTER);
-        document.add(header);
+        java.awt.Color darkBlue = new java.awt.Color(11, 29, 58);
+        java.awt.Color white = new java.awt.Color(255, 255, 255);
+
+        Font whiteBold = new Font(Font.HELVETICA, 9, Font.BOLD, white);
+        Font whiteSmall = new Font(Font.HELVETICA, 7, Font.NORMAL, white);
+        Font labelFont = new Font(Font.HELVETICA, 7, Font.BOLD, new java.awt.Color(60, 60, 60));
+        Font valueFont = new Font(Font.HELVETICA, 8, Font.NORMAL, new java.awt.Color(30, 30, 30));
+        Font footerFont = new Font(Font.HELVETICA, 6, Font.NORMAL, new java.awt.Color(100, 100, 100));
+
+        // ===== HEADER BAR =====
+        PdfPTable headerTable = new PdfPTable(1);
+        headerTable.setWidthPercentage(100);
+        PdfPCell headerCell = new PdfPCell();
+        headerCell.setBackgroundColor(darkBlue);
+        headerCell.setPadding(8);
+        headerCell.setBorder(Rectangle.NO_BORDER);
+        Paragraph schoolName = new Paragraph(student.getSchool() != null ? student.getSchool().getName() : "SCHOOL", whiteBold);
+        schoolName.setAlignment(Element.ALIGN_CENTER);
+        headerCell.addElement(schoolName);
+        Paragraph idLabel = new Paragraph("STUDENT IDENTITY CARD", whiteSmall);
+        idLabel.setAlignment(Element.ALIGN_CENTER);
+        headerCell.addElement(idLabel);
+        headerTable.addCell(headerCell);
+        document.add(headerTable);
         document.add(Chunk.NEWLINE);
 
-        // Student info
-        Font labelFont = new Font(Font.HELVETICA, 8, Font.BOLD);
-        Font valueFont = new Font(Font.HELVETICA, 8);
+        // ===== PHOTO + DETAILS =====
+        PdfPTable mainTable = new PdfPTable(2);
+        mainTable.setWidthPercentage(100);
+        mainTable.setWidths(new float[]{1, 2});
 
-        document.add(new Paragraph("Name: " + student.getFullName(), valueFont));
-        document.add(new Paragraph("Admission No: " + student.getAdmissionNumber(), valueFont));
-        document.add(new Paragraph("Class: " + (student.getSchoolClass() != null ? student.getSchoolClass().getName() : "N/A"), valueFont));
-        document.add(new Paragraph("Card No: " + cardNumber, valueFont));
-        document.add(new Paragraph("Valid Until: " + LocalDate.now().plusYears(1), valueFont));
+        // Photo cell
+        PdfPCell photoCell = new PdfPCell();
+        photoCell.setBorder(Rectangle.NO_BORDER);
+        photoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        photoCell.setVerticalAlignment(Element.ALIGN_TOP);
+
+        Image photoImage = loadStudentPhoto(student.getPhotoUrl());
+        if (photoImage != null) {
+            photoImage.scaleToFit(65, 80);
+            photoImage.setAlignment(Element.ALIGN_CENTER);
+            photoCell.addElement(photoImage);
+        } else {
+            // Placeholder box
+            PdfPTable placeholder = new PdfPTable(1);
+            placeholder.setWidthPercentage(80);
+            PdfPCell phCell = new PdfPCell(new Paragraph("PHOTO", new Font(Font.HELVETICA, 7, Font.NORMAL, new java.awt.Color(150, 150, 150))));
+            phCell.setFixedHeight(75);
+            phCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            phCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            phCell.setBorder(Rectangle.BOX);
+            phCell.setBorderColor(new java.awt.Color(180, 180, 180));
+            placeholder.addCell(phCell);
+            photoCell.addElement(placeholder);
+        }
+        mainTable.addCell(photoCell);
+
+        // Details cell
+        PdfPCell detailsCell = new PdfPCell();
+        detailsCell.setBorder(Rectangle.NO_BORDER);
+        detailsCell.setPaddingLeft(6);
+        detailsCell.setVerticalAlignment(Element.ALIGN_TOP);
+
+        addDetailRow(detailsCell, "Name:", student.getFullName(), labelFont, valueFont);
+        addDetailRow(detailsCell, "Adm. No:", student.getAdmissionNumber(), labelFont, valueFont);
+        addDetailRow(detailsCell, "Class:", student.getSchoolClass() != null ? student.getSchoolClass().getName() : "N/A", labelFont, valueFont);
+        addDetailRow(detailsCell, "Gender:", student.getGender() != null ? student.getGender() : "N/A", labelFont, valueFont);
+        addDetailRow(detailsCell, "DOB:", student.getDateOfBirth() != null ? student.getDateOfBirth().toString() : "N/A", labelFont, valueFont);
+
+        mainTable.addCell(detailsCell);
+        document.add(mainTable);
+        document.add(Chunk.NEWLINE);
+
+        // ===== QR CODE =====
+        Image qrImage = decodeQrImage(qrBase64);
+        if (qrImage != null) {
+            qrImage.scaleToFit(55, 55);
+            qrImage.setAlignment(Element.ALIGN_CENTER);
+            document.add(qrImage);
+        }
+        document.add(Chunk.NEWLINE);
+
+        // ===== FOOTER =====
+        Paragraph cardNum = new Paragraph("Card No: " + cardNumber, new Font(Font.HELVETICA, 7, Font.BOLD, darkBlue));
+        cardNum.setAlignment(Element.ALIGN_CENTER);
+        document.add(cardNum);
+
+        Paragraph validity = new Paragraph("Valid until: " + LocalDate.now().plusYears(1), footerFont);
+        validity.setAlignment(Element.ALIGN_CENTER);
+        document.add(validity);
 
         document.close();
         return baos;
+    }
+
+    private void addDetailRow(PdfPCell cell, String label, String value, Font labelFont, Font valueFont) {
+        Paragraph p = new Paragraph();
+        p.add(new Chunk(label + " ", labelFont));
+        p.add(new Chunk(value, valueFont));
+        p.setLeading(11);
+        cell.addElement(p);
+    }
+
+    @SneakyThrows
+    private Image decodeQrImage(String qrBase64) {
+        if (qrBase64 == null || qrBase64.isBlank()) return null;
+        String data = qrBase64;
+        if (data.contains(",")) {
+            data = data.substring(data.indexOf(",") + 1);
+        }
+        byte[] bytes = Base64.getDecoder().decode(data);
+        return Image.getInstance(bytes);
+    }
+
+    @SneakyThrows
+    private Image loadStudentPhoto(String photoUrl) {
+        if (photoUrl == null || photoUrl.isBlank()) return null;
+        if (photoUrl.startsWith("/uploads/")) {
+            Path path = Paths.get("." + photoUrl);
+            if (Files.exists(path)) {
+                return Image.getInstance(path.toAbsolutePath().toString());
+            }
+            // Try from project root
+            path = Paths.get(photoUrl.substring(1));
+            if (Files.exists(path)) {
+                return Image.getInstance(path.toAbsolutePath().toString());
+            }
+        }
+        if (photoUrl.startsWith("http://") || photoUrl.startsWith("https://")) {
+            return Image.getInstance(new URL(photoUrl));
+        }
+        return null;
     }
 
     private IdCardTemplateDto mapTemplateDto(IdCardTemplate t) {
@@ -150,6 +267,7 @@ public class IdCardService {
             dto.setStudentName(student.getFullName());
             dto.setStudentClass(student.getSchoolClass() != null ? student.getSchoolClass().getName() : null);
             dto.setAdmissionNumber(student.getAdmissionNumber());
+            dto.setPhotoUrl(student.getPhotoUrl());
         }
         dto.setCardNumber(card.getCardNumber());
         dto.setIssueDate(card.getIssueDate());

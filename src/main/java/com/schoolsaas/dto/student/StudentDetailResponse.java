@@ -33,6 +33,7 @@ public class StudentDetailResponse {
     private LocalDateTime createdAt;
 
     // Legacy denormalized parent fields (backward compatibility)
+    private String photoUrl;
     private String parentName;
     private String parentEmail;
     private String parentPhone;

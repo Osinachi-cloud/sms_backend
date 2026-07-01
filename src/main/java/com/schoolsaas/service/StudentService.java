@@ -240,6 +240,7 @@ public class StudentService {
                 .parentName(request.getParentName())
                 .parentEmail(request.getParentEmail())
                 .parentPhone(request.getParentPhone())
+                .photoUrl(request.getPhotoUrl())
                 .admissionDate(LocalDate.now())
                 .status("ACTIVE")
                 .metadata(request.getMetadata() != null ? request.getMetadata() : new java.util.HashMap<>())
@@ -472,6 +473,9 @@ public class StudentService {
         student.setParentName(request.getParentName());
         student.setParentEmail(request.getParentEmail());
         student.setParentPhone(request.getParentPhone());
+        if (request.getPhotoUrl() != null) {
+            student.setPhotoUrl(request.getPhotoUrl());
+        }
         if (request.getMetadata() != null) {
             student.setMetadata(request.getMetadata());
         }

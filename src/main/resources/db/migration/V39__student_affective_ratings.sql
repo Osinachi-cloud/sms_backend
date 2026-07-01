@@ -1,22 +1,27 @@
+-- Fix existing tables that were created before this migration
+ALTER TABLE IF EXISTS student_affective_ratings
+ADD COLUMN IF NOT EXISTS week_number INTEGER NOT NULL DEFAULT 0;
+
+-- For new installations
 CREATE TABLE IF NOT EXISTS student_affective_ratings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     school_id UUID NOT NULL,
     student_id UUID NOT NULL,
     term_id UUID NOT NULL,
     trait VARCHAR(50) NOT NULL,
-    rating INTEGER,
+    rating INTEGER DEFAULT 0,
     remarks VARCHAR(255),
     rated_by UUID,
-    week_number INTEGER NOT NULL DEFAULT 1,  -- Added this line
+    week_number INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
     CONSTRAINT fk_affective_school FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
     CONSTRAINT fk_affective_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
     CONSTRAINT fk_affective_term FOREIGN KEY (term_id) REFERENCES terms(id) ON DELETE CASCADE,
     CONSTRAINT fk_affective_rater FOREIGN KEY (rated_by) REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT uq_student_term_trait_week UNIQUE (student_id, term_id, trait, week_number)  -- Updated to include week_number
+    CONSTRAINT uq_student_term_trait_week UNIQUE (student_id, term_id, trait, week_number)
     );
 
-CREATE INDEX idx_affective_student ON student_affective_ratings(student_id);
-CREATE INDEX idx_affective_term ON student_affective_ratings(term_id);
-CREATE INDEX idx_affective_school ON student_affective_ratings(school_id);
+CREATE INDEX IF NOT EXISTS idx_affective_student ON student_affective_ratings(student_id);
+CREATE INDEX IF NOT EXISTS idx_affective_term ON student_affective_ratings(term_id);
+CREATE INDEX IF NOT EXISTS idx_affective_school ON student_affective_ratings(school_id);

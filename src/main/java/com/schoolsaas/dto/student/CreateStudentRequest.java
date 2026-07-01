@@ -32,6 +32,7 @@ public class CreateStudentRequest {
     private String parentEmail;
 
     private String parentPhone;
+    private String photoUrl;
     private String admissionNumber;
 
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,32}$",

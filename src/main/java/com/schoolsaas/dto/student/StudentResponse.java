@@ -29,6 +29,7 @@ public class StudentResponse {
     private String parentName;
     private String parentEmail;
     private String parentPhone;
+    private String photoUrl;
     private LocalDate admissionDate;
     private String status;
     private Map<String, Object> metadata;
@@ -50,6 +51,7 @@ public class StudentResponse {
                 .parentName(student.getParentName())
                 .parentEmail(student.getParentEmail())
                 .parentPhone(student.getParentPhone())
+                .photoUrl(student.getPhotoUrl())
                 .admissionDate(student.getAdmissionDate())
                 .status(student.getStatus())
                 .metadata(student.getMetadata())

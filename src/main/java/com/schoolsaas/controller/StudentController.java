@@ -18,11 +18,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -121,5 +129,40 @@ public class StudentController {
             @PathVariable UUID studentId) {
         studentService.deleteStudent(schoolId, studentId);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{studentId}/photo")
+    @PreAuthorize("hasPermission(#schoolId, 'student.update')")
+    public ResponseEntity<Map<String, String>> uploadStudentPhoto(
+            @PathVariable UUID schoolId,
+            @PathVariable UUID studentId,
+            @RequestParam("file") MultipartFile file) throws IOException {
+
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isBlank()) {
+            throw new IllegalArgumentException("File name is required");
+        }
+
+        String safeName = originalFilename.replaceAll("[^a-zA-Z0-9.-]", "_");
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String fileName = timestamp + "_" + safeName;
+
+        Path uploadPath = Paths.get("uploads", schoolId.toString(), "photos");
+        Files.createDirectories(uploadPath);
+        Path filePath = uploadPath.resolve(fileName);
+        Files.copy(file.getInputStream(), filePath);
+
+        String fileUrl = "/uploads/" + schoolId + "/photos/" + fileName;
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student", "id", studentId));
+        student.setPhotoUrl(fileUrl);
+        studentRepository.save(student);
+
+        return ResponseEntity.ok(Map.of(
+            "url", fileUrl,
+            "name", originalFilename,
+            "fullUrl", fileUrl
+        ));
     }
 }

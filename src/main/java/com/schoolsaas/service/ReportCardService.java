@@ -31,6 +31,7 @@ public class ReportCardService {
     private final GradeRepository gradeRepository;
     private final SchoolRepository schoolRepository;
     private final ClassRepository classRepository;
+    private final TeacherClassRepository teacherClassRepository;
     private final TermRepository termRepository;
     private final AcademicSessionRepository sessionRepository;
     private final StudentAffectiveRatingRepository affectiveRatingRepository;
@@ -57,6 +58,19 @@ public class ReportCardService {
             if (schoolClassOpt.isPresent()) {
                 SchoolClass schoolClass = schoolClassOpt.get();
                 className = schoolClass.getName();
+                // Find class teacher
+                List<TeacherClass> assignments = teacherClassRepository.findByClassId(schoolClass.getId());
+                for (TeacherClass tc : assignments) {
+                    if (Boolean.TRUE.equals(tc.getIsClassTeacher())) {
+                        if (tc.getTeacher() != null) {
+                            classTeacherName = tc.getTeacher().getFullName();
+                        } else {
+                            Teacher teacher = teacherRepository.findById(tc.getTeacherId()).orElse(null);
+                            classTeacherName = teacher != null ? teacher.getFullName() : null;
+                        }
+                        break;
+                    }
+                }
             }
         }
 
@@ -123,8 +137,9 @@ public class ReportCardService {
         Double overallAverage = count > 0 ? Math.round((totalAverage / count) * 10.0) / 10.0 : null;
 
         // Affective domain (behavioral) - aggregate weekly ratings by averaging
-        List<StudentAffectiveRating> allTermRatings = affectiveRatingRepository
-                .findBySchoolIdAndStudentIdAndTermId(schoolId, studentId, termId != null ? termId : UUID.fromString("00000000-0000-0000-0000-000000000000"));
+        List<StudentAffectiveRating> allTermRatings = termId != null
+                ? affectiveRatingRepository.findBySchoolIdAndStudentIdAndTermId(schoolId, studentId, termId)
+                : affectiveRatingRepository.findBySchoolIdAndStudentId(schoolId, studentId);
 
         Map<String, List<Integer>> ratingsByTrait = new HashMap<>();
         if (allTermRatings != null) {

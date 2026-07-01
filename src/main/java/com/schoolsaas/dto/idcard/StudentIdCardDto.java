@@ -16,6 +16,7 @@ public class StudentIdCardDto {
     private LocalDate issueDate;
     private LocalDate expiryDate;
     private String qrCode;
+    private String photoUrl;
     private String generatedPdfUrl;
     private String status;
 }

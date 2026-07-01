@@ -60,6 +60,9 @@ public class Student {
     @Column(name = "parent_phone")
     private String parentPhone;
 
+    @Column(name = "photo_url")
+    private String photoUrl;
+
     @Column(name = "admission_date")
     private LocalDate admissionDate;
 
