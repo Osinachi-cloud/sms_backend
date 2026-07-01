@@ -38,6 +38,32 @@ public class ReportCardController {
         return ResponseEntity.ok(reportCardService.publishReportCard(reportCardId, body.get("teacherComment"), body.get("principalComment")));
     }
 
+    @PostMapping("/{reportCardId}/email")
+    public ResponseEntity<Map<String, String>> emailReportCard(
+            @PathVariable UUID schoolId,
+            @PathVariable UUID reportCardId) {
+        reportCardService.emailReportCard(schoolId, reportCardId);
+        return ResponseEntity.ok(Map.of("message", "Report card emailed to parent"));
+    }
+
+    @PostMapping("/bulk-email")
+    public ResponseEntity<Map<String, String>> bulkEmailReportCards(
+            @PathVariable UUID schoolId,
+            @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> classIdStrings = (List<String>) body.get("classIds");
+        String termIdStr = (String) body.get("termId");
+        List<UUID> classIds = classIdStrings != null
+                ? classIdStrings.stream().map(UUID::fromString).toList()
+                : List.of();
+        UUID termId = termIdStr != null ? UUID.fromString(termIdStr) : null;
+        int count = reportCardService.bulkEmailReportCards(schoolId, classIds, termId);
+        return ResponseEntity.ok(Map.of(
+                "message", "Bulk email job started",
+                "count", String.valueOf(count)
+        ));
+    }
+
     @GetMapping
     public ResponseEntity<Page<ReportCardDto>> listReportCards(@PathVariable UUID schoolId, Pageable pageable) {
         return ResponseEntity.ok(reportCardService.listReportCards(schoolId, pageable));

@@ -11,9 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -247,7 +247,7 @@ public class TimetableService {
         if (links == null || links.isEmpty()) return null;
         try {
             return OBJECT_MAPPER.writeValueAsString(links);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             return null;
         }
     }
@@ -256,7 +256,7 @@ public class TimetableService {
         if (json == null || json.isBlank()) return List.of();
         try {
             return OBJECT_MAPPER.readValue(json, new TypeReference<List<Map<String, String>>>() {});
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             return List.of();
         }
     }

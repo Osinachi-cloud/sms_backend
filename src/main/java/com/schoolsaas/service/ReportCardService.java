@@ -122,24 +122,25 @@ public class ReportCardService {
 
         Double overallAverage = count > 0 ? Math.round((totalAverage / count) * 10.0) / 10.0 : null;
 
-        // Affective domain (behavioral) - read from dedicated ratings table
-        // Student metadata for comments
-        @SuppressWarnings("unchecked")
-        Map<String, Object> metadata = student.getMetadata() != null ? student.getMetadata() : new HashMap<>();
-
-        // Affective domain (behavioral) - read from dedicated ratings table
-        List<StudentAffectiveRating> affectiveRatings = affectiveRatingRepository
+        // Affective domain (behavioral) - aggregate weekly ratings by averaging
+        List<StudentAffectiveRating> allTermRatings = affectiveRatingRepository
                 .findBySchoolIdAndStudentIdAndTermId(schoolId, studentId, termId != null ? termId : UUID.fromString("00000000-0000-0000-0000-000000000000"));
 
-        // If no term-specific ratings found and termId is provided, try without strict term filter via fallback
-        if ((affectiveRatings == null || affectiveRatings.isEmpty()) && termId != null) {
-            affectiveRatings = affectiveRatingRepository.findBySchoolIdAndStudentIdAndTermId(schoolId, studentId, termId);
+        Map<String, List<Integer>> ratingsByTrait = new HashMap<>();
+        if (allTermRatings != null) {
+            for (StudentAffectiveRating r : allTermRatings) {
+                if (r.getRating() != null) {
+                    ratingsByTrait.computeIfAbsent(r.getTrait(), k -> new ArrayList<>()).add(r.getRating());
+                }
+            }
         }
 
-        Map<String, Integer> ratingMap = new HashMap<>();
-        if (affectiveRatings != null) {
-            for (StudentAffectiveRating r : affectiveRatings) {
-                ratingMap.put(r.getTrait(), r.getRating());
+        Map<String, Integer> aggregatedRatingMap = new HashMap<>();
+        for (Map.Entry<String, List<Integer>> entry : ratingsByTrait.entrySet()) {
+            List<Integer> vals = entry.getValue();
+            if (!vals.isEmpty()) {
+                int avg = (int) Math.round(vals.stream().mapToInt(Integer::intValue).average().orElse(0));
+                aggregatedRatingMap.put(entry.getKey(), avg);
             }
         }
 
@@ -149,7 +150,7 @@ public class ReportCardService {
         for (String trait : affectiveTraits) {
             Map<String, Object> traitMap = new HashMap<>();
             traitMap.put("trait", trait);
-            traitMap.put("rating", ratingMap.getOrDefault(trait, null));
+            traitMap.put("rating", aggregatedRatingMap.getOrDefault(trait, null));
             affectiveData.add(traitMap);
         }
 
@@ -227,6 +228,7 @@ public class ReportCardService {
         report.put("overall_grade", overallGradeLetter);
         report.put("grading_scale", gradingScale);
         report.put("affective_domain", affectiveData);
+        Map<String, Object> metadata = student.getMetadata() != null ? student.getMetadata() : new HashMap<>();
         report.put("teacher_comment", metadata.getOrDefault("teacherComment", ""));
         report.put("principal_comment", metadata.getOrDefault("principalComment", ""));
 
@@ -303,6 +305,79 @@ public class ReportCardService {
         }
 
         return mapToDto(rc);
+    }
+
+    @Transactional
+    public void emailReportCard(UUID schoolId, UUID reportCardId) {
+        ReportCard rc = reportCardRepository.findById(reportCardId)
+                .orElseThrow(() -> new RuntimeException("Report card not found"));
+        Student student = studentRepository.findById(rc.getStudentId())
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        if (student.getParentEmail() == null || student.getParentEmail().isBlank()) {
+            throw new RuntimeException("No parent email on file for student: " + student.getFullName());
+        }
+
+        Map<String, Object> report = getStudentReport(schoolId, rc.getStudentId(), rc.getTermId());
+        try {
+            byte[] pdf = pdfService.generateReportCardPdf(report);
+            String subject = "Academic Report - " + student.getFullName() + " (" + ((Map<String, Object>) report.getOrDefault("term", new HashMap<String, Object>())).get("name") + ")";
+            String htmlBody = buildReportCardEmailBody(student, report);
+            emailService.sendEmailWithAttachment(
+                    student.getParentEmail(), subject, htmlBody,
+                    new EmailService.EmailAttachment("report-card.pdf", pdf, "application/pdf")
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate or email report card PDF", e);
+        }
+    }
+
+    @Transactional
+    public int bulkEmailReportCards(UUID schoolId, List<UUID> classIds, UUID termId) {
+        if (classIds == null || classIds.isEmpty()) {
+            throw new RuntimeException("At least one class must be selected");
+        }
+        if (termId == null) {
+            throw new RuntimeException("Term is required");
+        }
+
+        int sent = 0;
+        for (UUID classId : classIds) {
+            List<Student> students = studentRepository.findActiveBySchoolIdAndClassId(schoolId, classId);
+            for (Student student : students) {
+                if (student.getParentEmail() == null || student.getParentEmail().isBlank()) continue;
+                try {
+                    Map<String, Object> report = getStudentReport(schoolId, student.getId(), termId);
+                    byte[] pdf = pdfService.generateReportCardPdf(report);
+                    String subject = "Academic Report - " + student.getFullName() + " (" + ((Map<String, Object>) report.getOrDefault("term", new HashMap<String, Object>())).get("name") + ")";
+                    String htmlBody = buildReportCardEmailBody(student, report);
+                    emailService.sendEmailWithAttachment(
+                            student.getParentEmail(), subject, htmlBody,
+                            new EmailService.EmailAttachment("report-card.pdf", pdf, "application/pdf")
+                    );
+                    sent++;
+                } catch (Exception e) {
+                    System.err.println("Failed to email report for student " + student.getId() + ": " + e.getMessage());
+                }
+            }
+        }
+        return sent;
+    }
+
+    private String buildReportCardEmailBody(Student student, Map<String, Object> report) {
+        Map<String, Object> term = (Map<String, Object>) report.getOrDefault("term", Map.of());
+        String termName = term.get("name") != null ? String.valueOf(term.get("name")) : "Current Term";
+        return "<html><body style='font-family:Arial,sans-serif;color:#333;'>"
+                + "<h2 style='color:#3b82f6;'>Academic Report Notification</h2>"
+                + "<p>Dear Parent/Guardian,</p>"
+                + "<p>Please find attached the academic report for <strong>" + esc(student.getFullName()) + "</strong> for <strong>" + esc(termName) + "</strong>.</p>"
+                + "<p>If you have any questions, please reach out to the school administration.</p>"
+                + "<br/><p>Best regards,<br/>School Administration</p></body></html>";
+    }
+
+    private String esc(Object o) {
+        if (o == null) return "";
+        return o.toString().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     public Page<ReportCardDto> listReportCards(UUID schoolId, Pageable pageable) {

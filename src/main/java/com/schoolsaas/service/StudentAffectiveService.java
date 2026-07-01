@@ -16,19 +16,29 @@ public class StudentAffectiveService {
     private final StudentAffectiveRatingRepository ratingRepository;
 
     @Transactional(readOnly = true)
-    public List<StudentAffectiveRating> getRatings(UUID schoolId, UUID studentId, UUID termId) {
+    public List<StudentAffectiveRating> getRatings(UUID schoolId, UUID studentId, UUID termId, Integer weekNumber) {
+        if (weekNumber != null) {
+            return ratingRepository.findBySchoolIdAndTermIdAndWeekNumber(schoolId, termId, weekNumber)
+                    .stream()
+                    .filter(r -> r.getStudentId().equals(studentId))
+                    .toList();
+        }
         return ratingRepository.findBySchoolIdAndStudentIdAndTermId(schoolId, studentId, termId);
     }
 
     @Transactional(readOnly = true)
-    public List<StudentAffectiveRating> getRatingsForTerm(UUID schoolId, UUID termId) {
+    public List<StudentAffectiveRating> getRatingsForTerm(UUID schoolId, UUID termId, Integer weekNumber) {
+        if (weekNumber != null) {
+            return ratingRepository.findBySchoolIdAndTermIdAndWeekNumber(schoolId, termId, weekNumber);
+        }
         return ratingRepository.findBySchoolIdAndTermId(schoolId, termId);
     }
 
     @Transactional
-    public List<StudentAffectiveRating> saveRatings(UUID schoolId, UUID studentId, UUID termId, List<Map<String, Object>> ratings) {
+    public List<StudentAffectiveRating> saveRatings(UUID schoolId, UUID studentId, UUID termId, Integer weekNumber, List<Map<String, Object>> ratings) {
         UUID raterId = SecurityUtils.getCurrentUserId();
         List<StudentAffectiveRating> result = new ArrayList<>();
+        int week = weekNumber != null ? weekNumber : 1;
 
         for (Map<String, Object> entry : ratings) {
             String trait = (String) entry.get("trait");
@@ -36,7 +46,7 @@ public class StudentAffectiveService {
             String remarks = entry.get("remarks") instanceof String ? (String) entry.get("remarks") : null;
 
             Optional<StudentAffectiveRating> existing = ratingRepository
-                    .findBySchoolIdAndStudentIdAndTermIdAndTrait(schoolId, studentId, termId, trait);
+                    .findBySchoolIdAndStudentIdAndTermIdAndWeekNumberAndTrait(schoolId, studentId, termId, week, trait);
 
             StudentAffectiveRating record;
             if (existing.isPresent()) {
@@ -49,6 +59,7 @@ public class StudentAffectiveService {
                         .schoolId(schoolId)
                         .studentId(studentId)
                         .termId(termId)
+                        .weekNumber(week)
                         .trait(trait)
                         .rating(rating)
                         .remarks(remarks)

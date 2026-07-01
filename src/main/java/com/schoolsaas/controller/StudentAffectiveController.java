@@ -21,15 +21,17 @@ public class StudentAffectiveController {
     public ResponseEntity<List<StudentAffectiveRating>> getStudentRatings(
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId,
-            @RequestParam UUID termId) {
-        return ResponseEntity.ok(affectiveService.getRatings(schoolId, studentId, termId));
+            @RequestParam UUID termId,
+            @RequestParam(required = false) Integer weekNumber) {
+        return ResponseEntity.ok(affectiveService.getRatings(schoolId, studentId, termId, weekNumber));
     }
 
     @GetMapping
     public ResponseEntity<List<StudentAffectiveRating>> getAllRatingsForTerm(
             @PathVariable UUID schoolId,
-            @RequestParam UUID termId) {
-        return ResponseEntity.ok(affectiveService.getRatingsForTerm(schoolId, termId));
+            @RequestParam UUID termId,
+            @RequestParam(required = false) Integer weekNumber) {
+        return ResponseEntity.ok(affectiveService.getRatingsForTerm(schoolId, termId, weekNumber));
     }
 
     @PostMapping("/student/{studentId}")
@@ -37,8 +39,9 @@ public class StudentAffectiveController {
             @PathVariable UUID schoolId,
             @PathVariable UUID studentId,
             @RequestParam UUID termId,
+            @RequestParam(required = false) Integer weekNumber,
             @RequestBody List<Map<String, Object>> ratings) {
-        return ResponseEntity.ok(affectiveService.saveRatings(schoolId, studentId, termId, ratings));
+        return ResponseEntity.ok(affectiveService.saveRatings(schoolId, studentId, termId, weekNumber, ratings));
     }
 
     @DeleteMapping("/{ratingId}")

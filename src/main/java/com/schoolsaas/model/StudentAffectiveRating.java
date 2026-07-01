@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "student_affective_ratings", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"student_id", "term_id", "trait"})
+        @UniqueConstraint(columnNames = {"student_id", "term_id", "trait", "week_number"})
 })
 @Getter
 @Setter
@@ -31,6 +31,10 @@ public class StudentAffectiveRating {
 
     @Column(name = "term_id", nullable = false)
     private UUID termId;
+
+    @Column(name = "week_number", nullable = false)
+    @Builder.Default
+    private Integer weekNumber = 1;
 
     @Column(nullable = false, length = 50)
     private String trait;
