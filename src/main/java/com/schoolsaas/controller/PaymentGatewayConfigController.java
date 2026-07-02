@@ -19,7 +19,7 @@ public class PaymentGatewayConfigController {
     private final PaymentGatewayConfigService configService;
 
     @GetMapping
-    @PreAuthorize("hasPermission(#schoolId, 'payment.gateway.manage') or hasPermission(#schoolId, 'payment.gateway.switch') or hasRole('APP_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PaymentGatewayConfigResponse> getConfig(@PathVariable UUID schoolId) {
         return ResponseEntity.ok(configService.getConfig(schoolId));
     }

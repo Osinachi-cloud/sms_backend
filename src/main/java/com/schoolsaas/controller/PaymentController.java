@@ -5,8 +5,10 @@ import com.schoolsaas.dto.payment.PaymentResponse;
 import com.schoolsaas.dto.payment.RecordPaymentRequest;
 import com.schoolsaas.model.Parent;
 import com.schoolsaas.model.ParentStudent;
+import com.schoolsaas.model.Student;
 import com.schoolsaas.repository.ParentRepository;
 import com.schoolsaas.repository.ParentStudentRepository;
+import com.schoolsaas.repository.StudentRepository;
 import com.schoolsaas.security.SecurityUtils;
 import com.schoolsaas.service.PaymentGatewayService;
 import jakarta.validation.Valid;
@@ -18,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,6 +32,7 @@ public class PaymentController {
     private final PaymentGatewayService paymentGatewayService;
     private final ParentRepository parentRepository;
     private final ParentStudentRepository parentStudentRepository;
+    private final StudentRepository studentRepository;
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
@@ -40,11 +44,36 @@ public class PaymentController {
     }
 
     @PostMapping("/initialize")
-    @PreAuthorize("hasPermission(#schoolId, 'payment.create')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PaymentResponse> initiatePayment(
             @PathVariable UUID schoolId,
             @Valid @RequestBody InitiatePaymentRequest request) {
-        return ResponseEntity.ok(paymentGatewayService.initiatePayment(schoolId, request));
+        UUID currentUserId = SecurityUtils.getCurrentUserId();
+
+        // Admins with payment.create can initiate for anyone
+        if (SecurityUtils.hasPermission("payment.create")) {
+            return ResponseEntity.ok(paymentGatewayService.initiatePayment(schoolId, request));
+        }
+
+        // Students can initiate payment for themselves
+        Optional<Student> studentOpt = studentRepository.findByUserId(currentUserId);
+        if (studentOpt.isPresent() && studentOpt.get().getId().equals(request.getStudentId())) {
+            return ResponseEntity.ok(paymentGatewayService.initiatePayment(schoolId, request));
+        }
+
+        // Parents can initiate payment for their children
+        var parentOpt = parentRepository.findByUserIdAndSchoolId(currentUserId, schoolId);
+        if (parentOpt.isPresent()) {
+            Parent parent = parentOpt.get();
+            List<UUID> childIds = parentStudentRepository.findByParentId(parent.getId()).stream()
+                    .map(ParentStudent::getStudentId)
+                    .collect(Collectors.toList());
+            if (childIds.contains(request.getStudentId())) {
+                return ResponseEntity.ok(paymentGatewayService.initiatePayment(schoolId, request));
+            }
+        }
+
+        return ResponseEntity.status(403).build();
     }
 
     @PostMapping("/record")

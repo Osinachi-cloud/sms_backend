@@ -48,6 +48,27 @@ public class PaymentGatewayService {
     public PaymentResponse initiatePayment(UUID schoolId, InitiatePaymentRequest request) {
         SchoolPaymentGatewayConfig config = getOrCreateConfig(schoolId);
 
+        // Prevent duplicate payments for the same fee/subject
+        if (request.getStudentFeeId() != null || request.getSubjectId() != null) {
+            Page<Payment> recentPayments = paymentRepository.findByStudentId(request.getStudentId(), org.springframework.data.domain.PageRequest.of(0, 50));
+            boolean hasActive = recentPayments.getContent().stream()
+                .filter(p -> !"FAILED".equals(p.getStatus()) && !"CANCELLED".equals(p.getStatus()) && !"ABANDONED".equals(p.getStatus()))
+                .anyMatch(p -> {
+                    if (request.getStudentFeeId() != null) {
+                        Object feeId = p.getMetadata() != null ? p.getMetadata().get("studentFeeId") : null;
+                        if (feeId != null && feeId.toString().equals(request.getStudentFeeId().toString())) return true;
+                    }
+                    if (request.getSubjectId() != null) {
+                        Object subId = p.getMetadata() != null ? p.getMetadata().get("subject_id") : null;
+                        if (subId != null && subId.toString().equals(request.getSubjectId().toString())) return true;
+                    }
+                    return false;
+                });
+            if (hasActive) {
+                throw new BadRequestException("An active or completed payment for this fee/subject already exists. Please wait for it to complete or contact support.");
+            }
+        }
+
         PaymentGatewayType primary = config.getActiveGateway();
         PaymentGatewayType fallback = primary == PaymentGatewayType.PAYSTACK ? PaymentGatewayType.FLUTTERWAVE : PaymentGatewayType.PAYSTACK;
 
@@ -78,6 +99,9 @@ public class PaymentGatewayService {
                 return flutterwaveProvider.initiatePayment(schoolId, request, config);
             }
             return null;
+        } catch (BadRequestException e) {
+            // Propagate clear configuration errors directly to the user
+            throw e;
         } catch (Exception e) {
             log.warn("Gateway {} initiation failed: {}", type, e.getMessage());
             return null;
@@ -115,12 +139,14 @@ public class PaymentGatewayService {
         if (request.getDescription() != null) {
             metadata.put("description", request.getDescription());
         }
+        if (request.getStudentFeeId() != null) {
+            metadata.put("studentFeeId", request.getStudentFeeId().toString());
+        }
         metadata.put("recorded_by", "admin");
 
         Payment payment = Payment.builder()
                 .schoolId(schoolId)
                 .studentId(request.getStudentId())
-                .studentFeeId(request.getStudentFeeId())
                 .amount(request.getAmount())
                 .currency(request.getCurrency() != null ? request.getCurrency() : "NGN")
                 .paymentReference(reference)

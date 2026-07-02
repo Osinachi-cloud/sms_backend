@@ -69,7 +69,6 @@ public class FlutterwaveProvider implements PaymentGatewayProvider {
         Payment payment = Payment.builder()
                 .schoolId(schoolId)
                 .studentId(request.getStudentId())
-                .studentFeeId(request.getStudentFeeId())
                 .amount(request.getAmount())
                 .currency(request.getCurrency() != null ? request.getCurrency() : "NGN")
                 .paymentReference(reference)
@@ -99,6 +98,9 @@ public class FlutterwaveProvider implements PaymentGatewayProvider {
             meta.put("school_id", schoolId.toString());
             meta.put("student_id", student.getId().toString());
             meta.put("student_name", student.getFullName());
+            if (request.getStudentFeeId() != null) {
+                meta.put("studentFeeId", request.getStudentFeeId().toString());
+            }
             if (request.getSubjectId() != null) {
                 meta.put("subject_id", request.getSubjectId().toString());
             }
@@ -118,6 +120,13 @@ public class FlutterwaveProvider implements PaymentGatewayProvider {
             if (jsonResponse.get("status").asText().equalsIgnoreCase("success")) {
                 JsonNode data = jsonResponse.get("data");
                 payment.setPaystackReference(data.has("id") ? data.get("id").asText() : null);
+
+                // Store fee item reference in metadata so frontend can link payment to fee
+                java.util.Map<String, Object> paymentMeta = new java.util.HashMap<>();
+                if (request.getStudentFeeId() != null) {
+                    paymentMeta.put("studentFeeId", request.getStudentFeeId().toString());
+                }
+                payment.setMetadata(paymentMeta);
 
                 payment = paymentRepository.save(payment);
 
@@ -171,9 +180,10 @@ public class FlutterwaveProvider implements PaymentGatewayProvider {
                     payment.setStatus("PENDING");
                 }
 
-                Map<String, Object> metadata = new HashMap<>();
+                Map<String, Object> metadata = new HashMap<>(payment.getMetadata() != null ? payment.getMetadata() : Map.of());
                 if (data.has("meta")) {
-                    metadata = objectMapper.convertValue(data.get("meta"), Map.class);
+                    Map<String, Object> flwMeta = objectMapper.convertValue(data.get("meta"), Map.class);
+                    metadata.putAll(flwMeta);
                 }
                 metadata.put("gateway_response", data.has("processor_response") ? data.get("processor_response").asText() : null);
                 metadata.put("flw_ref", data.has("flw_ref") ? data.get("flw_ref").asText() : null);

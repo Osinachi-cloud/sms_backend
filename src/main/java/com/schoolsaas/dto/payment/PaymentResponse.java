@@ -18,6 +18,7 @@ import java.util.UUID;
 public class PaymentResponse {
     private UUID id;
     private UUID studentId;
+    private UUID studentFeeId;
     private String studentName;
     private BigDecimal amount;
     private String currency;
@@ -36,6 +37,7 @@ public class PaymentResponse {
         return PaymentResponse.builder()
                 .id(payment.getId())
                 .studentId(payment.getStudentId())
+                .studentFeeId(payment.getStudentFeeId())
                 .studentName(payment.getStudent() != null ? payment.getStudent().getFullName() : null)
                 .amount(payment.getAmount())
                 .currency(payment.getCurrency())

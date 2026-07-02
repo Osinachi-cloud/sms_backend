@@ -64,21 +64,23 @@ public class PaystackProvider implements PaymentGatewayProvider {
             throw new ResourceNotFoundException("Student", "id", request.getStudentId());
         }
 
+        String secretKey = resolveSecretKey(config);
+        if (secretKey == null || secretKey.isBlank() || secretKey.contains("your_paystack")) {
+            throw new BadRequestException("Paystack is not fully configured. Please ask your school admin to set up the Paystack secret key in Settings > Payment Gateway.");
+        }
+
         String reference = "PAY_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
         BigDecimal amountInKobo = request.getAmount().multiply(BigDecimal.valueOf(100));
 
         Payment payment = Payment.builder()
                 .schoolId(schoolId)
                 .studentId(request.getStudentId())
-                .studentFeeId(request.getStudentFeeId())
                 .amount(request.getAmount())
                 .currency(request.getCurrency() != null ? request.getCurrency() : "NGN")
                 .paymentReference(reference)
                 .gateway(PaymentGatewayType.PAYSTACK)
                 .status("PENDING")
                 .build();
-
-        String secretKey = resolveSecretKey(config);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -90,14 +92,24 @@ public class PaystackProvider implements PaymentGatewayProvider {
             body.put("amount", amountInKobo.intValue());
             body.put("reference", reference);
             body.put("currency", payment.getCurrency());
-            if (request.getCallbackUrl() != null) {
+
+            // CRITICAL: Do NOT send callback_url for inline payments
+            // This prevents Paystack from redirecting
+            // Only send callback_url if explicitly requested (for redirect flow)
+            if (request.getCallbackUrl() != null && !request.getCallbackUrl().isEmpty()) {
                 body.put("callback_url", request.getCallbackUrl());
+                log.info("Callback URL provided - using redirect flow");
+            } else {
+                log.info("No callback URL provided - using inline flow");
             }
 
             Map<String, String> metadata = new HashMap<>();
             metadata.put("school_id", schoolId.toString());
             metadata.put("student_id", student.getId().toString());
             metadata.put("student_name", student.getFullName());
+            if (request.getStudentFeeId() != null) {
+                metadata.put("studentFeeId", request.getStudentFeeId().toString());
+            }
             if (request.getSubjectId() != null) {
                 metadata.put("subject_id", request.getSubjectId().toString());
             }
@@ -119,10 +131,37 @@ public class PaystackProvider implements PaymentGatewayProvider {
                 payment.setPaystackReference(data.get("reference").asText());
                 payment.setPaystackAccessCode(data.get("access_code").asText());
 
+                // Persist fee/subject linkage in metadata
+                Map<String, Object> paymentMeta = new HashMap<>();
+                if (request.getStudentFeeId() != null) {
+                    paymentMeta.put("studentFeeId", request.getStudentFeeId().toString());
+                }
+                if (request.getSubjectId() != null) {
+                    paymentMeta.put("subject_id", request.getSubjectId().toString());
+                }
+                if (request.getDescription() != null) {
+                    paymentMeta.put("description", request.getDescription());
+                }
+                payment.setMetadata(paymentMeta);
+
                 payment = paymentRepository.save(payment);
 
                 PaymentResponse paymentResponse = PaymentResponse.fromEntity(payment);
-                paymentResponse.setAuthorizationUrl(data.get("authorization_url").asText());
+
+                // CRITICAL FIX: For inline payments, do NOT return authorizationUrl
+                // Only return authorizationUrl if callback was provided (redirect flow)
+                if (request.getCallbackUrl() != null && !request.getCallbackUrl().isEmpty()) {
+                    // Redirect flow - include authorizationUrl
+                    paymentResponse.setAuthorizationUrl(data.get("authorization_url").asText());
+                    log.info("Redirect flow - authorization URL provided: {}", data.get("authorization_url").asText());
+                } else {
+                    // Inline flow - do NOT include authorizationUrl
+                    // The frontend should use the access_code instead
+                    log.info("Inline flow - no authorization URL provided. Access code: {}", data.get("access_code").asText());
+                    // Explicitly set authorizationUrl to null to ensure it's not sent
+                    paymentResponse.setAuthorizationUrl(null);
+                }
+
                 return paymentResponse;
             } else {
                 throw new BadRequestException("Payment initialization failed: " + jsonResponse.get("message").asText());
@@ -171,9 +210,10 @@ public class PaystackProvider implements PaymentGatewayProvider {
                     payment.setStatus("ABANDONED");
                 }
 
-                Map<String, Object> metadata = new HashMap<>();
+                Map<String, Object> metadata = new HashMap<>(payment.getMetadata() != null ? payment.getMetadata() : Map.of());
                 if (data.has("metadata")) {
-                    metadata = objectMapper.convertValue(data.get("metadata"), Map.class);
+                    Map<String, Object> paystackMeta = objectMapper.convertValue(data.get("metadata"), Map.class);
+                    metadata.putAll(paystackMeta);
                 }
                 metadata.put("gateway_response", data.has("gateway_response") ? data.get("gateway_response").asText() : null);
                 payment.setMetadata(metadata);

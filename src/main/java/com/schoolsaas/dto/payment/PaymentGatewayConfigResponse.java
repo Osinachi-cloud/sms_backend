@@ -28,8 +28,8 @@ public class PaymentGatewayConfigResponse {
         return PaymentGatewayConfigResponse.builder()
                 .id(config.getId())
                 .schoolId(config.getSchoolId())
-                .paystackPublicKey(maskKey(config.getPaystackPublicKey()))
-                .flutterwavePublicKey(maskKey(config.getFlutterwavePublicKey()))
+                .paystackPublicKey(config.getPaystackPublicKey())
+                .flutterwavePublicKey(config.getFlutterwavePublicKey())
                 .activeGateway(config.getActiveGateway())
                 .fallbackEnabled(config.getFallbackEnabled())
                 .paystackEnabled(config.getPaystackEnabled())
@@ -37,10 +37,5 @@ public class PaymentGatewayConfigResponse {
                 .createdAt(config.getCreatedAt())
                 .updatedAt(config.getUpdatedAt())
                 .build();
-    }
-
-    private static String maskKey(String key) {
-        if (key == null || key.length() <= 8) return key;
-        return key.substring(0, 4) + "****" + key.substring(key.length() - 4);
     }
 }
