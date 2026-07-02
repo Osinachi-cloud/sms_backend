@@ -22,7 +22,21 @@ cp .env.example .env
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-## Deploy to Railway
+## Deploy to Render (Current)
+
+The backend is currently hosted on **Render**.
+
+1. Create a new Web Service on [render.com](https://render.com)
+2. Connect your GitHub repo
+3. Set the runtime to **Docker**
+4. Add your environment variables from `.env.example`
+5. Deploy
+
+The `keep-alive.yml` GitHub Action pings the Render health endpoint to prevent the free-tier instance from sleeping during work hours.
+
+## Deploy to Railway (Alternative)
+
+> Railway deployment is currently **disabled** in this repo. To switch back to Railway, see [`RAILWAY_SETUP.md`](../RAILWAY_SETUP.md).
 
 ```bash
 # Install Railway CLI
@@ -38,7 +52,7 @@ railway up
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string (Railway auto-injects this) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `JWT_SECRET` | Yes | 64+ char random string |
 | `PAYSTACK_SECRET_KEY` | Yes | `sk_test_...` or `sk_live_...` |
 | `PAYSTACK_PUBLIC_KEY` | No | `pk_test_...` or `pk_live_...` |

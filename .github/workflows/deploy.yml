@@ -1,5 +1,10 @@
 name: Backend CI/CD
 
+# ===================================================================
+# DEPLOY TARGET: Render (current)
+# If you switch to Railway in the future, see RAILWAY_SETUP.md
+# ===================================================================
+
 on:
   push:
     branches: [main, develop, staging]
@@ -7,7 +12,6 @@ on:
       - 'src/**'
       - 'pom.xml'
       - 'Dockerfile'
-      - 'railway.toml'
       - 'application*.yml'
   pull_request:
     branches: [main, staging]
@@ -57,46 +61,47 @@ jobs:
       - name: Build JAR
         run: mvn package -DskipTests -B
 
-  # ------------------------------------------------------------------
-  # PRODUCTION DEPLOY
-  # ------------------------------------------------------------------
-  deploy-production:
-    name: Deploy to Railway (Production)
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: ${{ vars.SERVICE_URL }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Production Service
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service=${{ vars.RAILWAY_SERVICE_NAME }} --detach
-
-  # ------------------------------------------------------------------
-  # STAGING DEPLOY
-  # ------------------------------------------------------------------
-  deploy-staging:
-    name: Deploy to Railway (Staging)
-    needs: test
-    if: github.ref == 'refs/heads/staging'
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: ${{ vars.STAGING_SERVICE_URL }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Staging Service
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service=${{ vars.RAILWAY_STAGING_SERVICE_NAME }} --detach
+# ------------------------------------------------------------------
+# RAILWAY DEPLOYMENT (DISABLED — using Render)
+# ------------------------------------------------------------------
+# To enable Railway again:
+#   1. Uncomment the blocks below
+#   2. Add RAILWAY_TOKEN to GitHub Secrets
+#   3. Add RAILWAY_SERVICE_NAME to GitHub Variables
+#   4. Restore railway.toml
+#   5. Update NEXT_PUBLIC_API_BASE_URL in Vercel to your Railway URL
+# ------------------------------------------------------------------
+#
+#  deploy-production:
+#    name: Deploy to Railway (Production)
+#    needs: test
+#    if: github.ref == 'refs/heads/main'
+#    runs-on: ubuntu-latest
+#    environment:
+#      name: production
+#      url: ${{ vars.SERVICE_URL }}
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Install Railway CLI
+#        run: npm install -g @railway/cli
+#      - name: Deploy to Production Service
+#        env:
+#          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+#        run: railway up --service=${{ vars.RAILWAY_SERVICE_NAME }} --detach
+#
+#  deploy-staging:
+#    name: Deploy to Railway (Staging)
+#    needs: test
+#    if: github.ref == 'refs/heads/staging'
+#    runs-on: ubuntu-latest
+#    environment:
+#      name: staging
+#      url: ${{ vars.STAGING_SERVICE_URL }}
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Install Railway CLI
+#        run: npm install -g @railway/cli
+#      - name: Deploy to Staging Service
+#        env:
+#          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+#        run: railway up --service=${{ vars.RAILWAY_STAGING_SERVICE_NAME }} --detach

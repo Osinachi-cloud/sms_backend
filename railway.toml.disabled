@@ -1,0 +1,31 @@
+# ===================================================================
+# RAILWAY CONFIG (DISABLED)
+# ===================================================================
+# This project now uses Render for backend hosting.
+# This file was renamed from railway.toml to prevent accidental Railway builds.
+#
+# TO RE-ENABLE RAILWAY:
+#   1. Rename this file back to railway.toml
+#   2. Uncomment the backend deploy jobs in .github/workflows/deploy.yml
+#   3. Ensure your GitHub repo has these secrets/variables set:
+#        - Secret:  RAILWAY_TOKEN
+#        - Variable: RAILWAY_SERVICE_NAME (production)
+#        - Variable: RAILWAY_STAGING_SERVICE_NAME (staging)
+#   4. Push to main or staging branch to trigger deployment
+#   5. Update your frontend's NEXT_PUBLIC_API_BASE_URL to the Railway URL
+# ===================================================================
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = ""
+healthcheckPath = "/api/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[env]
+SPRING_PROFILES_ACTIVE = "prod"
+SERVER_PORT = "8080"

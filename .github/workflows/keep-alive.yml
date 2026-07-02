@@ -1,29 +1,21 @@
-#name: Keep Render Backend Alive
-#
-#on:
-#  schedule:
-#    # Run every 14 minutes
-#    - cron: '*/14 * * * *'
-#  workflow_dispatch:
-#
-#jobs:
-#  ping:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Ping Health Endpoint
-#        run: |
-#          echo "Pinging Render backend to prevent free-tier sleep..."
-#          curl -s -o /dev/null -w "%{http_code}" \
-#            https://sms-backend-joed.onrender.com/api/health || true
-#          echo "Ping complete."
-
 name: Keep Render Backend Alive (Work Hours Only)
+
+# ===================================================================
+# RENDER KEEP-ALIVE PINGER
+# ===================================================================
+# Render's free tier spins down after 15 minutes of inactivity.
+# This workflow pings the health endpoint every 13 minutes
+# during work hours (8 AM - 10 PM) to keep it warm.
+#
+# If you switch to Railway later:
+#   Railway free tier also sleeps, but you can use a similar ping approach.
+#   Just update the URL below to your Railway backend.
+# ===================================================================
 
 on:
   schedule:
-    # Run every 13 minutes from 8 AM to 10 PM (your timezone)
-    # Adjust the hours based on when your team tests
-    - cron: '*/13 8-22 * * *'  # 8 AM - 10 PM
+    # Run every 13 minutes from 8 AM to 10 PM
+    - cron: '*/13 8-22 * * *'
   workflow_dispatch:
 
 jobs:
@@ -32,7 +24,7 @@ jobs:
     steps:
       - name: Ping Health Endpoint
         run: |
-          echo "Pinging Render backend..."
+          echo "Pinging Render backend to prevent free-tier sleep..."
           curl -s -o /dev/null -w "%{http_code}" \
             https://sms-backend-joed.onrender.com/api/health || true
           echo "Ping complete."
