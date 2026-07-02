@@ -13,9 +13,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -47,20 +50,8 @@ public class DashboardService {
 
         long pendingApprovals = contentItemRepository.countBySchoolIdAndStatus(schoolId, "PENDING");
 
-        List<DashboardStats.RecentActivity> activities = List.of(
-                DashboardStats.RecentActivity.builder()
-                        .action("New student enrolled")
-                        .user("Admin")
-                        .time("2 hours ago")
-                        .type("ENROLLMENT")
-                        .build(),
-                DashboardStats.RecentActivity.builder()
-                        .action("Payment received")
-                        .user("Parent")
-                        .time("3 hours ago")
-                        .type("PAYMENT")
-                        .build()
-        );
+        // Build real recent activities from students, payments, and content
+        List<DashboardStats.RecentActivity> activities = buildRecentActivities(schoolId);
 
         return DashboardStats.builder()
                 .totalStudents(totalStudents)
@@ -227,5 +218,83 @@ public class DashboardService {
                 .pendingContentApprovals(0)
                 .recentSubmissions(List.of())
                 .build();
+    }
+
+    private List<DashboardStats.RecentActivity> buildRecentActivities(UUID schoolId) {
+        java.util.List<Student> recentStudents = studentRepository.findTop5BySchoolIdOrderByCreatedAtDesc(schoolId);
+        java.util.List<Payment> recentPayments = paymentRepository.findTop5BySchoolIdOrderByCreatedAtDesc(schoolId);
+        java.util.List<ContentItem> recentContent = contentItemRepository.findTop5BySchoolIdOrderByCreatedAtDesc(schoolId);
+
+        Stream<DashboardStats.RecentActivity> studentStream = recentStudents.stream()
+                .map(s -> DashboardStats.RecentActivity.builder()
+                        .action("New student enrolled: " + s.getFullName())
+                        .user("Admin")
+                        .time(formatRelativeTime(s.getCreatedAt()))
+                        .type("ENROLLMENT")
+                        .build());
+
+        Stream<DashboardStats.RecentActivity> paymentStream = recentPayments.stream()
+                .map(p -> DashboardStats.RecentActivity.builder()
+                        .action("Payment received: ₦" + p.getAmount() + (p.getStatus().equals("SUCCESS") ? "" : " (" + p.getStatus() + ")"))
+                        .user("Parent")
+                        .time(formatRelativeTime(p.getCreatedAt()))
+                        .type("PAYMENT")
+                        .build());
+
+        Stream<DashboardStats.RecentActivity> contentStream = recentContent.stream()
+                .map(c -> DashboardStats.RecentActivity.builder()
+                        .action("New content added: " + c.getTitle())
+                        .user("Teacher")
+                        .time(formatRelativeTime(c.getCreatedAt()))
+                        .type("CONTENT")
+                        .build());
+
+        return Stream.of(studentStream, paymentStream, contentStream)
+                .flatMap(s -> s)
+                .sorted((a, b) -> parseRelativeTime(b.getTime()).compareTo(parseRelativeTime(a.getTime())))
+                .limit(6)
+                .collect(Collectors.toList());
+    }
+
+    private String formatRelativeTime(LocalDateTime dateTime) {
+        if (dateTime == null) return "Just now";
+        Duration duration = Duration.between(dateTime, LocalDateTime.now());
+        long minutes = duration.toMinutes();
+        long hours = duration.toHours();
+        long days = duration.toDays();
+
+        if (minutes < 1) return "Just now";
+        if (minutes < 60) return minutes + " minutes ago";
+        if (hours < 24) return hours + " hours ago";
+        if (days < 7) return days + " days ago";
+        if (days < 30) return (days / 7) + " weeks ago";
+        return (days / 30) + " months ago";
+    }
+
+    private LocalDateTime parseRelativeTime(String time) {
+        // Crude reverse parser for sorting — we just need ordering
+        LocalDateTime now = LocalDateTime.now();
+        if (time.contains("Just now")) return now;
+        if (time.contains("minutes ago")) {
+            int m = Integer.parseInt(time.replaceAll("\\D", ""));
+            return now.minusMinutes(m);
+        }
+        if (time.contains("hours ago")) {
+            int h = Integer.parseInt(time.replaceAll("\\D", ""));
+            return now.minusHours(h);
+        }
+        if (time.contains("days ago")) {
+            int d = Integer.parseInt(time.replaceAll("\\D", ""));
+            return now.minusDays(d);
+        }
+        if (time.contains("weeks ago")) {
+            int w = Integer.parseInt(time.replaceAll("\\D", ""));
+            return now.minusWeeks(w);
+        }
+        if (time.contains("months ago")) {
+            int mo = Integer.parseInt(time.replaceAll("\\D", ""));
+            return now.minusMonths(mo);
+        }
+        return now;
     }
 }

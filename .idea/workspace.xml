@@ -5,17 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6a3efcbc-8641-40a5-9e3d-8fb88aa309bc" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/PaymentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/PaymentController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/PaymentGatewayConfigController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/PaymentGatewayConfigController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/payment/InitiatePaymentRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/payment/InitiatePaymentRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/payment/PaymentGatewayConfigResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/payment/PaymentGatewayConfigResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/payment/PaymentResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/payment/PaymentResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/exception/GlobalExceptionHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/FlutterwaveProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/FlutterwaveProvider.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/PaymentGatewayService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/PaymentGatewayService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/PaystackProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/PaystackProvider.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/AuthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/controller/AuthController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/auth/AuthResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/dto/auth/AuthResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/ContentItemRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/ContentItemRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/PaymentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/PaymentRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/StudentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/repository/StudentRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/AuthService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/DashboardService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/schoolsaas/service/DashboardService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -134,7 +130,7 @@
       <workItem from="1782728692528" duration="13018000" />
       <workItem from="1782836210601" duration="24000" />
       <workItem from="1782836276281" duration="30237000" />
-      <workItem from="1782974987018" duration="13665000" />
+      <workItem from="1782974987018" duration="17080000" />
     </task>
     <servers />
   </component>

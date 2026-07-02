@@ -29,6 +29,7 @@ public class AuthResponse {
         private String fullName;
         private String avatarUrl;
         private String platformRole;
+        private String phone;
         private UUID studentId;
         private List<ChildInfo> children;
         private List<SchoolInfo> schools;

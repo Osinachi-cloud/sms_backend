@@ -49,6 +49,8 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, UUID> 
 
     List<ContentItem> findBySchoolId(UUID schoolId);
 
+    List<ContentItem> findTop5BySchoolIdOrderByCreatedAtDesc(UUID schoolId);
+
     long countBySchoolId(UUID schoolId);
 
     @Query("SELECT c FROM ContentItem c WHERE c.schoolId = :schoolId AND c.featured = true AND c.status = 'PUBLISHED'")

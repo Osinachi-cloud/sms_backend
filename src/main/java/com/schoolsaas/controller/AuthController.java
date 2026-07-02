@@ -1,6 +1,7 @@
 package com.schoolsaas.controller;
 
 import com.schoolsaas.dto.auth.AuthResponse;
+import com.schoolsaas.dto.auth.ChangePasswordRequest;
 import com.schoolsaas.dto.auth.LoginRequest;
 import com.schoolsaas.dto.auth.RegisterRequest;
 import com.schoolsaas.security.SecurityUtils;
@@ -45,5 +46,11 @@ public class AuthController {
     public ResponseEntity<AuthResponse> switchSchool(@RequestBody Map<String, String> body) {
         String schoolId = body.get("schoolId");
         return ResponseEntity.ok(authService.switchSchool(SecurityUtils.getCurrentUserId(), schoolId));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(SecurityUtils.getCurrentUserId(), request);
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 }

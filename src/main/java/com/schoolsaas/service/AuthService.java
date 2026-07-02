@@ -1,6 +1,7 @@
 package com.schoolsaas.service;
 
 import com.schoolsaas.dto.auth.AuthResponse;
+import com.schoolsaas.dto.auth.ChangePasswordRequest;
 import com.schoolsaas.dto.auth.LoginRequest;
 import com.schoolsaas.dto.auth.RegisterRequest;
 import com.schoolsaas.exception.BadRequestException;
@@ -186,6 +187,7 @@ public class AuthService {
                         .fullName(user.getFullName())
                         .avatarUrl(user.getAvatarUrl())
                         .platformRole(user.getPlatformRole())
+                        .phone(user.getPhone())
                         .studentId(studentId)
                         .children(children.isEmpty() ? null : children)
                         .schools(schools)
@@ -255,5 +257,19 @@ public class AuthService {
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void changePassword(UUID userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("User not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        log.info("Password changed for user {}", userId);
     }
 }
