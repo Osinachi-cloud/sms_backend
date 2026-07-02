@@ -49,7 +49,8 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, UUID> 
 
     List<ContentItem> findBySchoolId(UUID schoolId);
 
-    List<ContentItem> findTop5BySchoolIdOrderByCreatedAtDesc(UUID schoolId);
+    @Query("SELECT c FROM ContentItem c WHERE c.schoolId = :schoolId ORDER BY c.createdAt DESC")
+    Page<ContentItem> findRecentBySchoolId(UUID schoolId, org.springframework.data.domain.Pageable pageable);
 
     long countBySchoolId(UUID schoolId);
 

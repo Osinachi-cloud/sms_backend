@@ -37,7 +37,8 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     java.util.List<Payment> findBySchoolId(UUID schoolId);
 
-    java.util.List<Payment> findTop5BySchoolIdOrderByCreatedAtDesc(UUID schoolId);
+    @Query("SELECT p FROM Payment p WHERE p.schoolId = :schoolId ORDER BY p.createdAt DESC")
+    Page<Payment> findRecentBySchoolId(UUID schoolId, org.springframework.data.domain.Pageable pageable);
 
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.schoolId = :schoolId AND p.status = :status")
     BigDecimal sumAmountBySchoolIdAndStatus(UUID schoolId, String status);

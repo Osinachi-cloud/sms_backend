@@ -70,7 +70,8 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
 
     List<Student> findBySchoolId(UUID schoolId);
 
-    List<Student> findTop5BySchoolIdOrderByCreatedAtDesc(UUID schoolId);
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId ORDER BY s.createdAt DESC")
+    Page<Student> findRecentBySchoolId(UUID schoolId, org.springframework.data.domain.Pageable pageable);
 
     @Query("SELECT COUNT(s) FROM Student s WHERE s.schoolId = :schoolId AND s.classId = :classId AND s.status = 'ACTIVE'")
     long countBySchoolIdAndClassId(UUID schoolId, UUID classId);

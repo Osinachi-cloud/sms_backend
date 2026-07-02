@@ -221,38 +221,48 @@ public class DashboardService {
     }
 
     private List<DashboardStats.RecentActivity> buildRecentActivities(UUID schoolId) {
-        java.util.List<Student> recentStudents = studentRepository.findTop5BySchoolIdOrderByCreatedAtDesc(schoolId);
-        java.util.List<Payment> recentPayments = paymentRepository.findTop5BySchoolIdOrderByCreatedAtDesc(schoolId);
-        java.util.List<ContentItem> recentContent = contentItemRepository.findTop5BySchoolIdOrderByCreatedAtDesc(schoolId);
+        // Always reserve a slot for the most recent enrollment
+        List<Student> recentStudents = studentRepository.findRecentBySchoolId(schoolId, org.springframework.data.domain.PageRequest.of(0, 1)).getContent();
+        // Fill remaining slots with payments
+        List<Payment> recentPayments = paymentRepository.findRecentBySchoolId(schoolId, org.springframework.data.domain.PageRequest.of(0, 1)).getContent();
 
-        Stream<DashboardStats.RecentActivity> studentStream = recentStudents.stream()
-                .map(s -> DashboardStats.RecentActivity.builder()
-                        .action("New student enrolled: " + s.getFullName())
-                        .user("Admin")
-                        .time(formatRelativeTime(s.getCreatedAt()))
-                        .type("ENROLLMENT")
-                        .build());
+        List<DashboardStats.RecentActivity> activities = new ArrayList<>();
 
-        Stream<DashboardStats.RecentActivity> paymentStream = recentPayments.stream()
-                .map(p -> DashboardStats.RecentActivity.builder()
-                        .action("Payment received: ₦" + p.getAmount() + (p.getStatus().equals("SUCCESS") ? "" : " (" + p.getStatus() + ")"))
-                        .user("Parent")
-                        .time(formatRelativeTime(p.getCreatedAt()))
-                        .type("PAYMENT")
-                        .build());
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
-        Stream<DashboardStats.RecentActivity> contentStream = recentContent.stream()
-                .map(c -> DashboardStats.RecentActivity.builder()
-                        .action("New content added: " + c.getTitle())
-                        .user("Teacher")
-                        .time(formatRelativeTime(c.getCreatedAt()))
-                        .type("CONTENT")
-                        .build());
+        for (Student s : recentStudents) {
+            String admissionDateStr = s.getAdmissionDate() != null
+                    ? s.getAdmissionDate().format(dateFormatter)
+                    : (s.getCreatedAt() != null ? s.getCreatedAt().format(dateFormatter) : "N/A");
+            activities.add(DashboardStats.RecentActivity.builder()
+                    .action("New student enrolled: " + s.getFullName())
+                    .user("Admin • Admitted: " + admissionDateStr)
+                    .time(formatRelativeTime(s.getCreatedAt()))
+                    .type("ENROLLMENT")
+                    .build());
+        }
 
-        return Stream.of(studentStream, paymentStream, contentStream)
-                .flatMap(s -> s)
+        Set<UUID> paymentStudentIds = recentPayments.stream()
+                .map(Payment::getStudentId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<UUID, Student> paymentStudentMap = studentRepository.findAllById(paymentStudentIds)
+                .stream().collect(Collectors.toMap(Student::getId, java.util.function.Function.identity()));
+
+        for (Payment p : recentPayments) {
+            Student s = paymentStudentMap.get(p.getStudentId());
+            String name = s != null ? s.getFullName() : "Unknown";
+            String statusSuffix = "SUCCESS".equals(p.getStatus()) ? "" : " (" + p.getStatus() + ")";
+            activities.add(DashboardStats.RecentActivity.builder()
+                    .action("Payment of ₦" + p.getAmount() + " received" + statusSuffix)
+                    .user(name)
+                    .time(formatRelativeTime(p.getCreatedAt()))
+                    .type("PAYMENT")
+                    .build());
+        }
+
+        return activities.stream()
                 .sorted((a, b) -> parseRelativeTime(b.getTime()).compareTo(parseRelativeTime(a.getTime())))
-                .limit(6)
                 .collect(Collectors.toList());
     }
 
