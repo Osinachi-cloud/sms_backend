@@ -92,7 +92,7 @@ server:
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET}
-  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION_MS:900000}      # 15 minutes
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION_MS:90000000}      # 15 minutes
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION_MS:604800000} # 7 days
 
 # OpenAI Configuration
